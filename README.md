@@ -20,6 +20,9 @@ No environment variables are needed.
 - iPhone (Safari): tap Share, then "Add to Home Screen".
 Open it once while online so the app files get cached; after that it works offline.
 
+## Timer
+The Timer button opens a countdown with an adjustable break reminder. Beeps repeat every 2 seconds until dismissed. The app keeps the screen awake while it runs; beeps may not play if the phone is locked or the app is in the background.
+
 ## Your data
 - It lives in the browser/app on that phone. Clearing site data, uninstalling, or switching
   phones loses it unless you saved a backup.

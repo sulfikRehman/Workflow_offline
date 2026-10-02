@@ -11,6 +11,7 @@ import {
   todayISO,
 } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
+import TimerModal from './TimerModal';
 import {
   Check,
   ChevronLeft,
@@ -20,6 +21,7 @@ import {
   Plus,
   Save,
   Target,
+  Timer,
   Trash2,
   TrendingUp,
   Upload,
@@ -56,6 +58,7 @@ export default function App() {
   const [entries, setEntries] = useState<HabitEntry[]>(() => store.getEntries());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
   const [adding, setAdding] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -229,7 +232,7 @@ export default function App() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/30">
               <Flame className="h-5 w-5 text-green-400" />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-base font-semibold tracking-tight text-white">
                 HabitFlow
               </h1>
@@ -274,6 +277,14 @@ export default function App() {
                 if (f) restoreBackup(f);
               }}
             />
+            <button
+              onClick={() => setTimerOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95 sm:px-3"
+              aria-label="Open timer"
+            >
+              <Timer className="h-4 w-4" />
+              <span className="hidden sm:inline">Timer</span>
+            </button>
             <button
               onClick={() => setAdding(true)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400 active:scale-95"
@@ -405,6 +416,8 @@ export default function App() {
       {adding && (
         <AddHabitModal onClose={() => setAdding(false)} onAdd={addHabit} />
       )}
+
+      {timerOpen && <TimerModal onClose={() => setTimerOpen(false)} />}
     </div>
   );
 }
