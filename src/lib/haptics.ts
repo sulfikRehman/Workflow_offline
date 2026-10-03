@@ -32,7 +32,32 @@ function readSetting(): boolean {
   }
 }
 
+// Phones cannot change how hard a buzz is, only how long it lasts. So "strength" scales the
+// length of each buzz (the pauses inside a pattern stay the same).
+export type HapticLevel = 'light' | 'medium' | 'strong';
+export const LEVELS: HapticLevel[] = ['light', 'medium', 'strong'];
+const LEVEL_KEY = 'habitflow:haptics-level';
+const LEVEL_FACTOR: Record<HapticLevel, number> = { light: 0.6, medium: 1, strong: 1.6 };
+const MIN_MS = 8;
+
+/** Scales the buzz lengths of a pattern. In an array, even positions are buzzes, odd are pauses. */
+export function scalePattern(p: number | number[], factor: number): number | number[] {
+  const s = (n: number) => Math.max(MIN_MS, Math.round(n * factor));
+  return Array.isArray(p) ? p.map((n, i) => (i % 2 === 0 ? s(n) : n)) : s(p);
+}
+
+function readLevel(): HapticLevel {
+  try {
+    const v = localStorage.getItem(LEVEL_KEY);
+    if (v === 'light' || v === 'medium' || v === 'strong') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'medium';
+}
+
 let enabled = readSetting();
+let level = readLevel();
 let lastAt = -Infinity;
 let installed = false;
 
@@ -42,6 +67,21 @@ export function hapticsSupported(): boolean {
 
 export function isHapticsOn(): boolean {
   return enabled;
+}
+
+export function getHapticLevel(): HapticLevel {
+  return level;
+}
+
+/** Sets the buzz length level, remembers it on this phone, and plays a sample. */
+export function setHapticLevel(next: HapticLevel): void {
+  level = next;
+  try {
+    localStorage.setItem(LEVEL_KEY, next);
+  } catch {
+    /* ignore */
+  }
+  haptic('confirm');
 }
 
 /** Turns haptics on or off and remembers the choice on this phone. */
@@ -66,7 +106,7 @@ export function haptic(kind: HapticKind): void {
   if (!enabled || !hapticsSupported()) return;
   lastAt = Date.now();
   try {
-    navigator.vibrate(PATTERNS[kind]);
+    navigator.vibrate(scalePattern(PATTERNS[kind], LEVEL_FACTOR[level]));
   } catch {
     /* vibration blocked */
   }

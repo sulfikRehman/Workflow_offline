@@ -11,27 +11,19 @@ import {
   todayISO,
 } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
-import {
-  haptic,
-  hapticsSupported,
-  isHapticsOn,
-  setHapticsOn,
-} from '@/lib/haptics';
+import { haptic } from '@/lib/haptics';
+import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Download,
   Flame,
   Plus,
-  Save,
-  Smartphone,
   Target,
   Timer,
   Trash2,
   TrendingUp,
-  Upload,
 } from 'lucide-react';
 
 type EntryMap = Record<string, Record<string, number>>;
@@ -66,7 +58,6 @@ export default function App() {
   const [weekRef, setWeekRef] = useState<Date>(new Date());
   const [adding, setAdding] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
-  const [vibrationOn, setVibrationOn] = useState(isHapticsOn);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -110,12 +101,6 @@ export default function App() {
     if (logEntry(habit, date, completing ? habit.target_value : 0)) {
       haptic(completing ? 'success' : 'undo');
     }
-  }
-
-  function toggleVibration() {
-    const next = !vibrationOn;
-    setHapticsOn(next);
-    setVibrationOn(next);
   }
 
   function deleteHabit(habit: Habit) {
@@ -265,52 +250,6 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {hapticsSupported() && (
-              <button
-                onClick={toggleVibration}
-                aria-pressed={vibrationOn}
-                aria-label={vibrationOn ? 'Vibration on' : 'Vibration off'}
-                title={vibrationOn ? 'Vibration on' : 'Vibration off'}
-                className={`relative inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm font-medium transition active:scale-95 sm:px-3 ${
-                  vibrationOn
-                    ? 'border-green-500/40 text-green-400 hover:border-green-500/60'
-                    : 'border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-white'
-                }`}
-              >
-                <Smartphone className="h-4 w-4" />
-                {!vibrationOn && (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-1/2 top-1/2 h-0.5 w-6 -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded bg-neutral-500"
-                  />
-                )}
-                <span className="hidden sm:inline">Vibrate</span>
-              </button>
-            )}
-            <button
-              onClick={downloadCSV}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95 sm:px-3"
-              aria-label="Export CSV"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">CSV</span>
-            </button>
-            <button
-              onClick={saveBackup}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95 sm:px-3"
-              aria-label="Save backup"
-            >
-              <Save className="h-4 w-4" />
-              <span className="hidden sm:inline">Backup</span>
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95 sm:px-3"
-              aria-label="Restore backup"
-            >
-              <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Restore</span>
-            </button>
             <input
               ref={fileRef}
               type="file"
@@ -337,6 +276,12 @@ export default function App() {
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Habit</span>
             </button>
+            <MoreMenu
+              onSaveBackup={saveBackup}
+              onRestoreBackup={() => fileRef.current?.click()}
+              onExportCSV={downloadCSV}
+              canExport={habits.length > 0}
+            />
           </div>
         </div>
       </header>
