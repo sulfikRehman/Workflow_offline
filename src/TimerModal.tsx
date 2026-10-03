@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BellRing, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { BellRing, Minus, Pause, Play, Plus, RotateCcw, X } from 'lucide-react';
 import { beep, unlockAudio } from '@/lib/beep';
+import { clampDuration } from '@/lib/dial';
 import { formatMs, nextBreakAfter } from '@/lib/timer';
+import TimerDial from '@/TimerDial';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
 type Alarm = null | 'break' | 'end';
@@ -20,7 +22,7 @@ function loadSettings(): Settings {
         typeof s.breakOn === 'boolean' &&
         typeof s.breakEvery === 'number'
       ) {
-        return s;
+        return { ...s, duration: clampDuration(s.duration) };
       }
     }
   } catch {
@@ -36,7 +38,7 @@ function toInt(s: string): number {
 
 export default function TimerModal({ onClose }: { onClose: () => void }) {
   const [initial] = useState(loadSettings);
-  const [durationStr, setDurationStr] = useState(String(initial.duration));
+  const [duration, setDuration] = useState(initial.duration);
   const [breakStr, setBreakStr] = useState(String(initial.breakEvery));
   const [breakOn, setBreakOn] = useState(initial.breakOn);
 
@@ -51,17 +53,13 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
   const nextBreakRef = useRef(Infinity);
   const wakeRef = useRef<WakeLockSentinel | null>(null);
 
-  const duration = Math.min(1000, Math.max(0, toInt(durationStr)));
   const breakEvery = toInt(breakStr);
   const breakActive = breakOn && breakEvery >= 1 && breakEvery < duration;
   const locked = phase === 'running' || phase === 'paused';
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        SETTINGS_KEY,
-        JSON.stringify({ duration: duration || 1, breakOn, breakEvery })
-      );
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ duration, breakOn, breakEvery }));
     } catch {
       /* ignore */
     }
@@ -173,14 +171,31 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
+  function adjust(delta: number) {
+    setDuration((d) => clampDuration(d + delta));
+  }
+
+  function bumpBreak(delta: number) {
+    setBreakStr(String(Math.max(1, toInt(breakStr) + delta)));
+  }
+
   const shownMs = phase === 'idle' ? duration * 60000 : remaining;
-  const pct =
-    phase === 'idle' || totalRef.current === 0
-      ? 0
-      : Math.min(100, Math.max(0, (1 - remaining / totalRef.current) * 100));
+  const timeText = formatMs(shownMs);
+  const caption =
+    phase === 'idle'
+      ? 'Drag the dial'
+      : phase === 'paused'
+        ? 'Paused'
+        : phase === 'finished'
+          ? "Time's up"
+          : 'Remaining';
 
   const inputCls =
     'w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none disabled:opacity-50';
+  const chipCls =
+    'flex-1 rounded-lg border border-neutral-800 py-2 text-sm font-medium text-neutral-300 hover:text-white active:scale-95';
+  const stepCls =
+    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40';
 
   return (
     <div
@@ -189,13 +204,13 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
+        className="max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
       >
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-base font-semibold text-white">Timer</h2>
             <p className="mt-0.5 text-xs text-neutral-500">
-              Countdown with a repeating break reminder.
+              Turn the dial to set the time, with a repeating break reminder.
             </p>
           </div>
           <button
@@ -207,19 +222,47 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="mt-5 text-center">
-          <p
-            className="text-6xl font-semibold tabular-nums tracking-tight text-white"
-            aria-live="off"
+        <div className="mt-4">
+          <TimerDial
+            duration={duration}
+            shownMin={shownMs / 60000}
+            breakEvery={breakActive ? breakEvery : 0}
+            locked={phase !== 'idle'}
+            onChange={setDuration}
           >
-            {formatMs(shownMs)}
-          </p>
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-neutral-800">
-            <div
-              className="h-full rounded-full bg-green-500 transition-[width] duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+            <p
+              className={`font-semibold tabular-nums tracking-tight text-white ${
+                timeText.length > 5 ? 'text-3xl' : 'text-5xl'
+              }`}
+              aria-live="off"
+            >
+              {timeText}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">{caption}</p>
+          </TimerDial>
+
+          {phase === 'idle' && (
+            <>
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => adjust(-5)} className={chipCls}>
+                  −5
+                </button>
+                <button type="button" onClick={() => adjust(-1)} className={chipCls}>
+                  −1
+                </button>
+                <button type="button" onClick={() => adjust(1)} className={chipCls}>
+                  +1
+                </button>
+                <button type="button" onClick={() => adjust(5)} className={chipCls}>
+                  +5
+                </button>
+              </div>
+              <p className="mt-2 text-center text-[11px] text-neutral-500">
+                One turn of the dial = 60 minutes (up to 12 hours).
+                {breakActive && ' Amber dots mark break reminders.'}
+              </p>
+            </>
+          )}
         </div>
 
         {alarm && (
@@ -240,34 +283,27 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-              Timer length (minutes)
-            </label>
+        <div className="mt-5">
+          <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
             <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={1000}
-              value={durationStr}
+              type="checkbox"
+              checked={breakOn}
               disabled={locked}
-              onChange={(e) => setDurationStr(e.target.value)}
-              className={inputCls}
+              onChange={(e) => setBreakOn(e.target.checked)}
+              className="h-4 w-4 accent-green-500"
             />
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
-              <input
-                type="checkbox"
-                checked={breakOn}
-                disabled={locked}
-                onChange={(e) => setBreakOn(e.target.checked)}
-                className="h-4 w-4 accent-green-500"
-              />
-              Break reminder: beep every (minutes)
-            </label>
+            Break reminder: beep every (minutes)
+          </label>
+          <div className="mt-1.5 flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Decrease break interval"
+              disabled={locked || !breakOn}
+              onClick={() => bumpBreak(-1)}
+              className={stepCls}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
             <input
               type="number"
               inputMode="numeric"
@@ -275,15 +311,24 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
               value={breakStr}
               disabled={locked || !breakOn}
               onChange={(e) => setBreakStr(e.target.value)}
-              className={`${inputCls} mt-1.5`}
+              className={`${inputCls} text-center`}
             />
-            {breakOn && !breakActive && duration >= 1 && (
-              <p className="mt-1.5 text-[11px] text-amber-400">
-                The break interval must be at least 1 and shorter than the timer
-                length, so no break reminders will play.
-              </p>
-            )}
+            <button
+              type="button"
+              aria-label="Increase break interval"
+              disabled={locked || !breakOn}
+              onClick={() => bumpBreak(1)}
+              className={stepCls}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
+          {breakOn && !breakActive && (
+            <p className="mt-1.5 text-[11px] text-amber-400">
+              The break interval must be at least 1 and shorter than the timer length, so no
+              break reminders will play.
+            </p>
+          )}
         </div>
 
         <div className="mt-5 flex gap-2">

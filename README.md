@@ -21,7 +21,9 @@ No environment variables are needed.
 Open it once while online so the app files get cached; after that it works offline.
 
 ## Timer
-The Timer button opens a countdown with an adjustable break reminder. Beeps repeat every 2 seconds until dismissed. The app keeps the screen awake while it runs; beeps may not play if the phone is locked or the app is in the background.
+The Timer button opens a round dial clock. Drag around the dial to set the time: one full turn is 60 minutes, and you can keep turning for more (up to 12 hours). The −5, −1, +1 and +5 buttons (or the arrow keys on the dial) fine-tune it. While the timer runs, the green arc and the hand show the time left, and amber dots mark the break reminders still to come in the current turn.
+
+Break reminders are adjustable: tick the box and set how many minutes apart they are. Beeps repeat every 2 seconds until dismissed. The app keeps the screen awake while it runs; beeps may not play if the phone is locked or the app is in the background.
 
 ## Your data
 - It lives in the browser/app on that phone. Clearing site data, uninstalling, or switching
