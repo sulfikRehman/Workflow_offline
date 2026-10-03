@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BellRing, Minus, Pause, Play, Plus, RotateCcw, X } from 'lucide-react';
 import { beep, unlockAudio } from '@/lib/beep';
 import { clampDuration } from '@/lib/dial';
+import { haptic } from '@/lib/haptics';
 import { formatMs, nextBreakAfter } from '@/lib/timer';
 import TimerDial from '@/TimerDial';
 
@@ -127,12 +128,17 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => releaseWake, [releaseWake]);
 
-  // Beep immediately, then every 2 seconds, until the alarm is dismissed.
+  // Beep and vibrate immediately, then every 2 seconds, until the alarm is dismissed.
   useEffect(() => {
     if (!alarm) return;
     const freq = alarm === 'end' ? 988 : 660;
-    beep(freq);
-    const id = setInterval(() => beep(freq), 2000);
+    const kind = alarm === 'end' ? 'endAlarm' : 'breakAlarm';
+    const fire = () => {
+      beep(freq);
+      haptic(kind);
+    };
+    fire();
+    const id = setInterval(fire, 2000);
     return () => clearInterval(id);
   }, [alarm]);
 

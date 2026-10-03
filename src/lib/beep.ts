@@ -27,9 +27,4 @@ export function beep(frequency = 880, durationMs = 400): void {
   gain.connect(ctx.destination);
   osc.start(t);
   osc.stop(t + durationMs / 1000 + 0.05);
-  try {
-    navigator.vibrate?.(Math.min(durationMs, 250));
-  } catch {
-    /* vibration not supported */
-  }
 }

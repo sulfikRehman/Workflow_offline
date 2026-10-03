@@ -8,6 +8,7 @@ import {
   durationFromAngle,
   faceMinutes,
 } from '@/lib/dial';
+import { haptic } from '@/lib/haptics';
 
 const C = 150; // centre of the 300 x 300 drawing
 const R = 112; // radius of the ring
@@ -70,6 +71,7 @@ export default function TimerDial({
     if (next !== valueRef.current) {
       valueRef.current = next;
       onChange(next);
+      haptic('tick'); // one tick per minute passed
     }
     return true;
   }

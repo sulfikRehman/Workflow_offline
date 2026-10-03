@@ -25,6 +25,9 @@ The Timer button opens a round dial clock. Drag around the dial to set the time:
 
 Break reminders are adjustable: tick the box and set how many minutes apart they are. Beeps repeat every 2 seconds until dismissed. The app keeps the screen awake while it runs; beeps may not play if the phone is locked or the app is in the background.
 
+## Vibration (haptic feedback)
+The phone vibrates lightly on every button tap, once per minute as you turn the timer dial, with a double buzz when a habit is checked off or added, and with different longer patterns for the break and end-of-timer alarms. The phone icon in the top bar turns all of it on or off (remembered on that phone). It uses the browser's Vibration API: it works in Chrome on Android, and does nothing on browsers without it, such as Safari on iPhone. If the buzzes feel too faint, the lengths are in `src/lib/haptics.ts`.
+
 ## Your data
 - It lives in the browser/app on that phone. Clearing site data, uninstalling, or switching
   phones loses it unless you saved a backup.

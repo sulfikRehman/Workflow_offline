@@ -1,7 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import { installTapHaptics } from '@/lib/haptics';
 import './index.css';
+
+installTapHaptics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
