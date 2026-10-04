@@ -9,6 +9,10 @@ export type Habit = {
   color: string;
   sort_order: number;
   created_at: string;
+  /** Days of the week the habit is scheduled (0 = Sunday ... 6 = Saturday). Missing = every day. */
+  days?: number[];
+  /** Archived habits are hidden from the main list and stats but keep their history. */
+  archived?: boolean;
 };
 
 export type HabitEntry = {
@@ -67,8 +71,25 @@ function isHabit(h: unknown): h is Habit {
     x.target_value > 0 &&
     typeof x.color === 'string' &&
     typeof x.sort_order === 'number' &&
-    typeof x.created_at === 'string'
+    typeof x.created_at === 'string' &&
+    (x.days === undefined ||
+      (Array.isArray(x.days) &&
+        x.days.length >= 1 &&
+        x.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6))) &&
+    (x.archived === undefined || typeof x.archived === 'boolean')
   );
+}
+
+/**
+ * Cleans a list of weekdays: removes duplicates and invalid values and sorts it.
+ * Returns undefined (meaning "every day") for an empty list or all seven days.
+ */
+export function normalizeDays(days?: number[]): number[] | undefined {
+  if (!days) return undefined;
+  const set = [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(
+    (a, b) => a - b
+  );
+  return set.length === 0 || set.length === 7 ? undefined : set;
 }
 
 function isEntry(e: unknown): e is HabitEntry {
@@ -145,8 +166,11 @@ export function addHabit(data: {
   icon: string;
   unit: string;
   target_value: number;
+  days?: number[];
 }): Habit {
+  if (!data.name.trim() || !(data.target_value > 0)) throw new Error('Invalid habit');
   const db = load();
+  const days = normalizeDays(data.days);
   const habit: Habit = {
     id: uid(),
     name: data.name,
@@ -156,9 +180,45 @@ export function addHabit(data: {
     color: '#22c55e',
     sort_order: db.habits.reduce((m, h) => Math.max(m, h.sort_order), 0) + 1,
     created_at: new Date().toISOString(),
+    ...(days ? { days } : {}),
   };
   const next = { ...db, habits: [...db.habits, habit] };
   write(next); // throws if it cannot be saved; cache only changes on success
+  cache = next;
+  return habit;
+}
+
+export type HabitPatch = {
+  name?: string;
+  icon?: string;
+  unit?: string;
+  target_value?: number;
+  days?: number[];
+  archived?: boolean;
+};
+
+/** Changes a habit's details. History is kept. Throws if the habit does not exist. */
+export function updateHabit(id: string, patch: HabitPatch): Habit {
+  const db = load();
+  const old = db.habits.find((h) => h.id === id);
+  if (!old) throw new Error('Habit not found');
+  if (patch.name !== undefined && !patch.name.trim()) throw new Error('Invalid habit');
+  if (patch.target_value !== undefined && !(patch.target_value > 0)) {
+    throw new Error('Invalid habit');
+  }
+  const { days: newDays, archived, ...rest } = patch;
+  const habit: Habit = { ...old, ...rest };
+  if ('days' in patch) {
+    const days = normalizeDays(newDays);
+    if (days) habit.days = days;
+    else delete habit.days;
+  }
+  if (archived !== undefined) {
+    if (archived) habit.archived = true;
+    else delete habit.archived;
+  }
+  const next = { ...db, habits: db.habits.map((h) => (h.id === id ? habit : h)) };
+  write(next);
   cache = next;
   return habit;
 }
@@ -174,6 +234,9 @@ export function deleteHabit(id: string): void {
 }
 
 export function setEntry(habit_id: string, date: string, value: number): HabitEntry {
+  if (!Number.isFinite(value) || value < 0 || !DATE_RE.test(date)) {
+    throw new Error('Invalid entry');
+  }
   const db = load();
   const existing = db.entries.find((e) => e.habit_id === habit_id && e.date === date);
   const entry: HabitEntry = existing

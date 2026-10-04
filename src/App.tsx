@@ -1,29 +1,38 @@
 import { useMemo, useRef, useState } from 'react';
 import * as store from '@/lib/store';
 import type { Habit, HabitEntry } from '@/lib/store';
-import {
-  getWeekDays,
-  shiftWeek,
-  toISODate,
-  isToday,
-  dayLabel,
-  shortDate,
-  todayISO,
-} from '@/lib/date';
+import { getWeekDays, shiftWeek, toISODate, isToday, shortDate, todayISO } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
 import { haptic } from '@/lib/haptics';
+import {
+  activeDaysIn,
+  bestStreak,
+  currentStreak,
+  isActiveDay,
+  parseISODate,
+  round2,
+  timeUnitFactor,
+} from '@/lib/stats';
+import { dismissNudge, getNudge, markBackupSaved } from '@/lib/backupNudge';
+import type { Nudge } from '@/lib/backupNudge';
+import AmountModal from './AmountModal';
+import HabitCalendar from './HabitCalendar';
+import HabitForm from './HabitForm';
+import type { HabitFormData } from './HabitForm';
+import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import {
-  Check,
+  Archive,
+  ArchiveRestore,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Flame,
+  Pencil,
   Plus,
   Target,
   Timer,
-  Trash2,
-  TrendingUp,
 } from 'lucide-react';
 
 type EntryMap = Record<string, Record<string, number>>;
@@ -33,11 +42,6 @@ function csvEscape(s: string): string {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
-}
-
-function pct(value: number, target: number): number {
-  if (target <= 0) return 0;
-  return Math.min(100, Math.round((value / target) * 100));
 }
 
 function download(filename: string, text: string, type: string) {
@@ -57,14 +61,21 @@ export default function App() {
   const [entries, setEntries] = useState<HabitEntry[]>(() => store.getEntries());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [calendarId, setCalendarId] = useState<string | null>(null);
+  const [amountFor, setAmountFor] = useState<{ habitId: string; date: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [nudge, setNudge] = useState<Nudge>(() => getNudge(store.getEntries().length > 0));
   const fileRef = useRef<HTMLInputElement>(null);
 
   const weekDays = useMemo(() => getWeekDays(weekRef), [weekRef]);
+  const activeHabits = useMemo(() => habits.filter((h) => !h.archived), [habits]);
+  const archivedHabits = useMemo(() => habits.filter((h) => h.archived), [habits]);
 
-  // All entries, keyed habit -> date -> value (used for the week grid and for streaks)
+  // All entries, keyed habit -> date -> value (used for the week grid, streaks and the calendar)
   const entryMap: EntryMap = useMemo(() => {
     const m: EntryMap = {};
     for (const e of entries) {
@@ -73,6 +84,26 @@ export default function App() {
     }
     return m;
   }, [entries]);
+
+  const valueOnFor = (habitId: string) => (iso: string) => entryMap[habitId]?.[iso] ?? 0;
+
+  // Current and best streak for each habit (scheduled days only)
+  const streaks = useMemo(() => {
+    const out: Record<string, { current: number; best: number }> = {};
+    for (const h of activeHabits) {
+      const valueOn = (iso: string) => entryMap[h.id]?.[iso] ?? 0;
+      const dates = Object.keys(entryMap[h.id] ?? {}).sort();
+      out[h.id] = {
+        current: currentStreak(h, valueOn),
+        best: dates.length ? bestStreak(h, valueOn, parseISODate(dates[0])) : 0,
+      };
+    }
+    return out;
+  }, [activeHabits, entryMap]);
+
+  const editingHabit = habits.find((h) => h.id === editingId) ?? null;
+  const calendarHabit = activeHabits.find((h) => h.id === calendarId) ?? null;
+  const amountHabit = habits.find((h) => h.id === amountFor?.habitId) ?? null;
 
   function fail(message: string, err: unknown) {
     console.error(err);
@@ -84,9 +115,7 @@ export default function App() {
     try {
       const e = store.setEntry(habit.id, date, value);
       setEntries((prev) =>
-        prev.some((x) => x.id === e.id)
-          ? prev.map((x) => (x.id === e.id ? e : x))
-          : [...prev, e]
+        prev.some((x) => x.id === e.id) ? prev.map((x) => (x.id === e.id ? e : x)) : [...prev, e]
       );
       return true;
     } catch (err) {
@@ -103,29 +132,49 @@ export default function App() {
     }
   }
 
+  function openAmount(habit: Habit, date: string) {
+    haptic('confirm');
+    setAmountFor({ habitId: habit.id, date });
+  }
+
+  function saveAmount(value: number) {
+    if (!amountHabit || !amountFor) return;
+    if (logEntry(amountHabit, amountFor.date, value)) {
+      haptic('success');
+      setAmountFor(null);
+    }
+  }
+
+  /** Adds minutes from the timer to today's total for a habit measured in minutes or hours. */
+  function logTime(habitId: string, minutes: number): boolean {
+    const habit = habits.find((h) => h.id === habitId);
+    const factor = habit ? timeUnitFactor(habit.unit) : null;
+    if (!habit || factor === null) return false;
+    const today = todayISO();
+    const total = round2((entryMap[habit.id]?.[today] ?? 0) + minutes * factor);
+    const ok = logEntry(habit, today, total);
+    if (ok) haptic('success');
+    return ok;
+  }
+
   function deleteHabit(habit: Habit) {
-    if (
-      !window.confirm(
-        `Delete "${habit.name}" and all its history? This cannot be undone.`
-      )
-    )
+    if (!window.confirm(`Delete "${habit.name}" and all its history? This cannot be undone.`)) {
       return;
+    }
     try {
       store.deleteHabit(habit.id);
       setHabits((prev) => prev.filter((h) => h.id !== habit.id));
       setEntries((prev) => prev.filter((e) => e.habit_id !== habit.id));
+      if (editingId === habit.id) setEditingId(null);
+      if (calendarId === habit.id) setCalendarId(null);
+      if (amountFor?.habitId === habit.id) setAmountFor(null);
       haptic('confirm');
     } catch (err) {
       fail('Could not delete that habit.', err);
     }
   }
 
-  function addHabit(data: {
-    name: string;
-    icon: string;
-    unit: string;
-    target_value: number;
-  }) {
+  function addHabit(data: HabitFormData) {
     try {
       const row = store.addHabit(data);
       setHabits((prev) => [...prev, row]);
@@ -136,48 +185,53 @@ export default function App() {
     }
   }
 
-  // Stats
-  const todayStr = todayISO();
-  const todayCompleted = habits.filter((h) => {
-    const v = entryMap[h.id]?.[todayStr] ?? 0;
-    return v >= h.target_value;
-  }).length;
-
-  const weekCompleted = habits.reduce((acc, h) => {
-    return (
-      acc +
-      weekDays.filter((d) => {
-        const v = entryMap[h.id]?.[toISODate(d)] ?? 0;
-        return v >= h.target_value;
-      }).length
-    );
-  }, 0);
-
-  const maxWeekChecks = habits.length * 7;
-
-  // Best current streak across any single habit. A streak that ended yesterday still counts
-  // (today is not over yet).
-  const bestStreak = useMemo(() => {
-    let best = 0;
-    for (const habit of habits) {
-      let streak = 0;
-      const d = new Date();
-      if ((entryMap[habit.id]?.[toISODate(d)] ?? 0) < habit.target_value) {
-        d.setDate(d.getDate() - 1);
-      }
-      for (let i = 0; i < 3650; i++) {
-        const v = entryMap[habit.id]?.[toISODate(d)] ?? 0;
-        if (v >= habit.target_value) {
-          streak++;
-          d.setDate(d.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-      if (streak > best) best = streak;
+  function saveEdit(habit: Habit, data: HabitFormData) {
+    try {
+      const row = store.updateHabit(habit.id, data);
+      setHabits((prev) => prev.map((h) => (h.id === row.id ? row : h)));
+      setEditingId(null);
+      haptic('success');
+    } catch (err) {
+      fail('Could not save those changes. Your phone storage may be full or blocked.', err);
     }
-    return best;
-  }, [habits, entryMap]);
+  }
+
+  function setArchived(habit: Habit, archived: boolean) {
+    try {
+      const row = store.updateHabit(habit.id, { archived });
+      setHabits((prev) => prev.map((h) => (h.id === row.id ? row : h)));
+      setEditingId(null);
+      if (archived && calendarId === habit.id) setCalendarId(null);
+      setError(null);
+      setNotice(
+        archived
+          ? `Archived "${habit.name}". It is listed under Archived at the bottom, with its history.`
+          : `Restored "${habit.name}".`
+      );
+      haptic('confirm');
+    } catch (err) {
+      fail('Could not change that habit. Your phone storage may be full or blocked.', err);
+    }
+  }
+
+  // Stats (archived habits and days a habit isn't scheduled are left out)
+  const todayDate = new Date();
+  const todayStr = todayISO();
+  const scheduledToday = activeHabits.filter((h) => isActiveDay(h, todayDate));
+  const todayCompleted = scheduledToday.filter(
+    (h) => (entryMap[h.id]?.[todayStr] ?? 0) >= h.target_value
+  ).length;
+
+  const weekCompleted = activeHabits.reduce(
+    (acc, h) =>
+      acc +
+      weekDays.filter(
+        (d) => isActiveDay(h, d) && (entryMap[h.id]?.[toISODate(d)] ?? 0) >= h.target_value
+      ).length,
+    0
+  );
+  const maxWeekChecks = activeHabits.reduce((acc, h) => acc + activeDaysIn(h, weekDays), 0);
+  const topStreak = activeHabits.reduce((m, h) => Math.max(m, streaks[h.id]?.current ?? 0), 0);
 
   function downloadCSV() {
     if (habits.length === 0) return;
@@ -202,11 +256,9 @@ export default function App() {
   }
 
   function saveBackup() {
-    download(
-      `habitflow-backup-${todayISO()}.json`,
-      store.exportBackup(),
-      'application/json'
-    );
+    download(`habitflow-backup-${todayISO()}.json`, store.exportBackup(), 'application/json');
+    markBackupSaved();
+    setNudge(null);
     setError(null);
     setNotice('Backup downloaded. Keep the file somewhere safe (Drive, email to yourself).');
     haptic('success');
@@ -223,6 +275,9 @@ export default function App() {
       store.importBackup(await file.text());
       setHabits(store.getHabits());
       setEntries(store.getEntries());
+      setEditingId(null);
+      setCalendarId(null);
+      setAmountFor(null);
       setError(null);
       setNotice('Backup restored.');
       haptic('success');
@@ -241,12 +296,8 @@ export default function App() {
               <Flame className="h-5 w-5 text-green-400" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-base font-semibold tracking-tight text-white">
-                HabitFlow
-              </h1>
-              <p className="text-[11px] text-neutral-500">
-                Track your daily routines
-              </p>
+              <h1 className="text-base font-semibold tracking-tight text-white">HabitFlow</h1>
+              <p className="text-[11px] text-neutral-500">Track your daily routines</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -291,25 +342,13 @@ export default function App() {
         <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           <StatCard
             label="Today"
-            value={`${todayCompleted}/${habits.length}`}
+            value={`${todayCompleted}/${scheduledToday.length}`}
             sub="completed"
             accent
           />
-          <StatCard
-            label="This Week"
-            value={`${weekCompleted}`}
-            sub={`of ${maxWeekChecks} checks`}
-          />
-          <StatCard
-            label="Best Streak"
-            value={`${bestStreak}`}
-            sub="days"
-          />
-          <StatCard
-            label="Habits"
-            value={`${habits.length}`}
-            sub="tracking"
-          />
+          <StatCard label="This Week" value={`${weekCompleted}`} sub={`of ${maxWeekChecks} checks`} />
+          <StatCard label="Best Streak" value={`${topStreak}`} sub="days" />
+          <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" />
         </section>
 
         {/* Week selector */}
@@ -359,24 +398,50 @@ export default function App() {
             className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
           >
             <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-xs font-medium text-red-200 underline"
-            >
+            <button onClick={() => setError(null)} className="text-xs font-medium text-red-200 underline">
               Dismiss
             </button>
           </div>
         )}
 
+        {nudge && (
+          <div
+            role="status"
+            className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+          >
+            <p>
+              {nudge.kind === 'stale'
+                ? `Your last backup was ${nudge.days} days ago. Save a new one so you don't lose recent progress.`
+                : "Your data is saved only on this phone. Save a backup so you don't lose it."}
+            </p>
+            <div className="mt-2 flex gap-4">
+              <button onClick={saveBackup} className="text-xs font-semibold text-amber-100 underline">
+                Save backup
+              </button>
+              <button
+                onClick={() => {
+                  dismissNudge();
+                  setNudge(null);
+                }}
+                className="text-xs font-medium text-amber-300/80 underline"
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Habit grid */}
-        {habits.length === 0 ? (
+        {activeHabits.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/30 py-16 text-center">
             <Target className="mb-3 h-10 w-10 text-neutral-700" />
             <p className="text-sm font-medium text-neutral-300">
-              No habits yet
+              {archivedHabits.length > 0 ? 'No active habits' : 'No habits yet'}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              Add your first habit to start tracking.
+              {archivedHabits.length > 0
+                ? 'Restore one from Archived below, or add a new one.'
+                : 'Add your first habit to start tracking.'}
             </p>
             <button
               onClick={() => setAdding(true)}
@@ -387,27 +452,128 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {habits.map((habit) => (
-              <HabitRow
-                key={habit.id}
-                habit={habit}
-                weekDays={weekDays}
-                entryMap={entryMap}
-                onToggle={(date) => toggleComplete(habit, date)}
-                onLog={(date, val) => logEntry(habit, date, val)}
-                onDelete={() => deleteHabit(habit)}
+          <>
+            <p className="mb-3 text-center text-[11px] text-neutral-500">
+              Tap a day to mark it done · hold a day, or tap today&apos;s total, to enter an amount
+            </p>
+            <div className="space-y-3">
+              {activeHabits.map((habit) => (
+                <HabitRow
+                  key={habit.id}
+                  habit={habit}
+                  weekDays={weekDays}
+                  valueOn={valueOnFor(habit.id)}
+                  streak={streaks[habit.id] ?? { current: 0, best: 0 }}
+                  onToggle={(date) => toggleComplete(habit, date)}
+                  onAmount={(date) => openAmount(habit, date)}
+                  onEdit={() => setEditingId(habit.id)}
+                  onCalendar={() => setCalendarId(habit.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Archived habits */}
+        {archivedHabits.length > 0 && (
+          <section className="mt-8">
+            <button
+              onClick={() => setShowArchived((s) => !s)}
+              aria-expanded={showArchived}
+              className="flex w-full items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
+            >
+              <span className="flex items-center gap-2">
+                <Archive className="h-4 w-4 text-neutral-500" />
+                Archived ({archivedHabits.length})
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-neutral-500 transition-transform ${
+                  showArchived ? 'rotate-180' : ''
+                }`}
               />
-            ))}
-          </div>
+            </button>
+            {showArchived && (
+              <ul className="mt-2 space-y-2">
+                {archivedHabits.map((habit) => {
+                  const Icon = getHabitIcon(habit.icon);
+                  return (
+                    <li
+                      key={habit.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/60 bg-neutral-900/30 px-3 py-2.5"
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg opacity-60"
+                          style={{ backgroundColor: `${habit.color}1a`, color: habit.color }}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="truncate text-sm text-neutral-300">{habit.name}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={() => setArchived(habit, false)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:text-white active:scale-95"
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5" /> Restore
+                        </button>
+                        <button
+                          onClick={() => setEditingId(habit.id)}
+                          aria-label={`Edit ${habit.name}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         )}
       </main>
 
-      {adding && (
-        <AddHabitModal onClose={() => setAdding(false)} onAdd={addHabit} />
+      {adding && <HabitForm onSave={addHabit} onClose={() => setAdding(false)} />}
+
+      {editingHabit && (
+        <HabitForm
+          habit={editingHabit}
+          onSave={(data) => saveEdit(editingHabit, data)}
+          onClose={() => setEditingId(null)}
+          onArchive={() => setArchived(editingHabit, !editingHabit.archived)}
+          onDelete={() => deleteHabit(editingHabit)}
+        />
       )}
 
-      {timerOpen && <TimerModal onClose={() => setTimerOpen(false)} />}
+      {calendarHabit && (
+        <HabitCalendar
+          habit={calendarHabit}
+          valueOn={valueOnFor(calendarHabit.id)}
+          streak={streaks[calendarHabit.id] ?? { current: 0, best: 0 }}
+          onToggle={(iso) => toggleComplete(calendarHabit, iso)}
+          onAmount={(iso) => openAmount(calendarHabit, iso)}
+          onClose={() => setCalendarId(null)}
+        />
+      )}
+
+      {amountHabit && amountFor && (
+        <AmountModal
+          habit={amountHabit}
+          date={amountFor.date}
+          current={entryMap[amountHabit.id]?.[amountFor.date] ?? 0}
+          onSave={saveAmount}
+          onClose={() => setAmountFor(null)}
+        />
+      )}
+
+      {timerOpen && (
+        <TimerModal
+          habits={activeHabits}
+          onLogTime={logTime}
+          onClose={() => setTimerOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -426,314 +592,16 @@ function StatCard({
   return (
     <div
       className={`rounded-2xl border p-4 ${
-        accent
-          ? 'border-green-500/30 bg-green-500/10'
-          : 'border-neutral-800/60 bg-neutral-900/40'
+        accent ? 'border-green-500/30 bg-green-500/10' : 'border-neutral-800/60 bg-neutral-900/40'
       }`}
     >
-      <p className="text-[11px] uppercase tracking-wider text-neutral-500">
-        {label}
-      </p>
+      <p className="text-[11px] uppercase tracking-wider text-neutral-500">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold tabular-nums ${
-          accent ? 'text-green-400' : 'text-white'
-        }`}
+        className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
       >
         {value}
       </p>
       <p className="text-[11px] text-neutral-500">{sub}</p>
-    </div>
-  );
-}
-
-function HabitRow({
-  habit,
-  weekDays,
-  entryMap,
-  onToggle,
-  onLog,
-  onDelete,
-}: {
-  habit: Habit;
-  weekDays: Date[];
-  entryMap: EntryMap;
-  onToggle: (date: string) => void;
-  onLog: (date: string, value: number) => void;
-  onDelete: () => void;
-}) {
-  const Icon = getHabitIcon(habit.icon);
-  const weekVals = weekDays.map((d) => entryMap[habit.id]?.[toISODate(d)] ?? 0);
-  const weekTotal = weekVals.reduce((a, b) => a + b, 0);
-  const weekTarget = habit.target_value * 7;
-  const weekPct = pct(weekTotal, weekTarget);
-  const todayVal = entryMap[habit.id]?.[todayISO()] ?? 0;
-  const todayPct = pct(todayVal, habit.target_value);
-
-  return (
-    <div className="group rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              backgroundColor: `${habit.color}1a`,
-              color: habit.color,
-            }}
-          >
-            <Icon className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">{habit.name}</h3>
-            <p className="text-[11px] text-neutral-500">
-              Target: {habit.target_value} {habit.unit}/day
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-right">
-            <p className="text-sm font-semibold tabular-nums text-green-400">
-              {todayVal}
-              <span className="text-neutral-500"> / {habit.target_value}</span>
-            </p>
-            <p className="text-[11px] text-neutral-500">{habit.unit} today</p>
-          </div>
-          <button
-            onClick={onDelete}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-600 transition hover:bg-neutral-800 hover:text-red-400"
-            aria-label={`Delete ${habit.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Today progress bar */}
-      <div className="mt-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${todayPct}%`,
-              backgroundColor: habit.color,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Week grid */}
-      <div className="mt-4 grid grid-cols-7 gap-1.5">
-        {weekDays.map((d, i) => {
-          const iso = toISODate(d);
-          const val = weekVals[i];
-          const done = val >= habit.target_value;
-          const partial = val > 0 && !done;
-          const today = isToday(d);
-          return (
-            <button
-              key={iso}
-              onClick={() => onToggle(iso)}
-              className={`flex flex-col items-center gap-1 rounded-lg border py-2 transition active:scale-95 ${
-                today
-                  ? 'border-green-500/40'
-                  : 'border-neutral-800/50 hover:border-neutral-700'
-              } ${done ? 'bg-green-500/15' : 'bg-neutral-900/30'}`}
-              title={`${val} / ${habit.target_value} ${habit.unit}`}
-            >
-              <span
-                className={`text-[10px] font-medium ${
-                  today ? 'text-green-400' : 'text-neutral-500'
-                }`}
-              >
-                {dayLabel(d)}
-              </span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] ${
-                  done
-                    ? 'text-neutral-950'
-                    : partial
-                    ? 'text-white'
-                    : 'text-neutral-600'
-                }`}
-                style={{
-                  backgroundColor: done
-                    ? habit.color
-                    : partial
-                    ? `${habit.color}33`
-                    : 'transparent',
-                }}
-              >
-                {done ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : partial ? (
-                  Math.round(val)
-                ) : (
-                  ''
-                )}
-              </span>
-              <span className="text-[9px] text-neutral-600">
-                {d.getDate()}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Week summary */}
-      <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-500">
-        <span className="flex items-center gap-1">
-          <TrendingUp className="h-3.5 w-3.5 text-neutral-600" />
-          {Math.round(weekTotal)} / {Math.round(weekTarget)} {habit.unit} this
-          week
-        </span>
-        <span className="tabular-nums">{weekPct}%</span>
-      </div>
-    </div>
-  );
-}
-
-const ICON_OPTIONS = [
-  'BookOpen',
-  'Dumbbell',
-  'BookMarked',
-  'UtensilsCrossed',
-  'Moon',
-  'Droplet',
-  'Heart',
-  'Brain',
-  'Footprints',
-  'Apple',
-  'Bike',
-  'Pencil',
-  'Clock',
-];
-
-function AddHabitModal({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (data: {
-    name: string;
-    icon: string;
-    unit: string;
-    target_value: number;
-  }) => void;
-}) {
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState('BookOpen');
-  const [unit, setUnit] = useState('min');
-  const [target, setTarget] = useState(30);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    onAdd({
-      name: name.trim(),
-      icon,
-      unit: unit.trim() || 'count',
-      target_value: Math.max(1, target || 1),
-    });
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
-      >
-        <h2 className="text-base font-semibold text-white">New Habit</h2>
-        <p className="mt-0.5 text-xs text-neutral-500">
-          Add a habit to track daily.
-        </p>
-
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-              Name
-            </label>
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Meditation"
-              className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-green-500 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-                Unit
-              </label>
-              <input
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                placeholder="min, hrs, pages..."
-                className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-green-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-                Daily Target
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={target}
-                onChange={(e) => setTarget(Number(e.target.value) || 0)}
-                className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-              Icon
-            </label>
-            <div className="grid grid-cols-7 gap-1.5">
-              {ICON_OPTIONS.map((ic) => {
-                const Ico = getHabitIcon(ic);
-                const sel = ic === icon;
-                return (
-                  <button
-                    type="button"
-                    key={ic}
-                    onClick={() => setIcon(ic)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                      sel
-                        ? 'border-green-500 bg-green-500/15 text-green-400'
-                        : 'border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-white'
-                    }`}
-                  >
-                    <Ico className="h-5 w-5" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 transition hover:bg-neutral-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-green-400"
-          >
-            Add Habit
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

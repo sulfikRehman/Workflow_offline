@@ -3,7 +3,9 @@ import { BellRing, Minus, Pause, Play, Plus, RotateCcw, X } from 'lucide-react';
 import { beep, unlockAudio } from '@/lib/beep';
 import { clampDuration } from '@/lib/dial';
 import { haptic } from '@/lib/haptics';
+import { round2, timeUnitFactor } from '@/lib/stats';
 import { formatMs, nextBreakAfter } from '@/lib/timer';
+import type { Habit } from '@/lib/store';
 import TimerDial from '@/TimerDial';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
@@ -37,7 +39,15 @@ function toInt(s: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export default function TimerModal({ onClose }: { onClose: () => void }) {
+type Props = {
+  /** Habits that can receive the finished timer's minutes (archived ones are left out). */
+  habits: Habit[];
+  /** Adds minutes to today's total for a habit. Returns false if it could not be saved. */
+  onLogTime: (habitId: string, minutes: number) => boolean;
+  onClose: () => void;
+};
+
+export default function TimerModal({ habits, onLogTime, onClose }: Props) {
   const [initial] = useState(loadSettings);
   const [duration, setDuration] = useState(initial.duration);
   const [breakStr, setBreakStr] = useState(String(initial.breakEvery));
@@ -46,6 +56,10 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [alarm, setAlarm] = useState<Alarm>(null);
   const [remaining, setRemaining] = useState(0);
+  // After a timer finishes: minutes that can still be added to a habit, and what was logged.
+  const [pendingLog, setPendingLog] = useState<number | null>(null);
+  const [logHabitId, setLogHabitId] = useState('');
+  const [loggedMsg, setLoggedMsg] = useState<string | null>(null);
 
   const totalRef = useRef(0);
   const endAtRef = useRef(0);
@@ -152,6 +166,8 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
     nextBreakRef.current = breakActive ? breakEvery * 60000 : Infinity;
     setRemaining(total);
     setAlarm(null);
+    setPendingLog(null);
+    setLoggedMsg(null);
     setPhase('running');
   }
 
@@ -168,8 +184,21 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
   }
 
   function reset() {
+    // Stopping a finished timer keeps the chance to log its time to a habit.
+    if (phase === 'finished') setPendingLog(totalRef.current / 60000);
     setAlarm(null);
     setPhase('idle');
+  }
+
+  const loggable = habits.filter((h) => timeUnitFactor(h.unit) !== null);
+  const logTarget = loggable.find((h) => h.id === logHabitId) ?? loggable[0];
+
+  function logTimeNow() {
+    if (pendingLog === null || !logTarget) return;
+    if (onLogTime(logTarget.id, pendingLog)) {
+      setLoggedMsg(`Added ${round2(pendingLog)} min to ${logTarget.name}.`);
+      setPendingLog(null);
+    }
   }
 
   function requestClose() {
@@ -287,6 +316,48 @@ export default function TimerModal({ onClose }: { onClose: () => void }) {
               {alarm === 'end' ? 'Stop' : 'Dismiss'}
             </button>
           </div>
+        )}
+
+        {phase === 'idle' && pendingLog !== null && logTarget && (
+          <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
+            <p className="text-sm font-medium text-white">
+              Add {round2(pendingLog)} min to a habit?
+            </p>
+            <div className="mt-2 flex gap-2">
+              <select
+                value={logTarget.id}
+                onChange={(e) => setLogHabitId(e.target.value)}
+                aria-label="Habit to add the time to"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+              >
+                {loggable.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} ({h.unit})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={logTimeNow}
+                className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setPendingLog(null)}
+                className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
+              >
+                No
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] text-neutral-500">
+              Only habits measured in minutes or hours are listed. The time is added to today.
+            </p>
+          </div>
+        )}
+        {phase === 'idle' && loggedMsg && (
+          <p role="status" className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">
+            {loggedMsg}
+          </p>
         )}
 
         <div className="mt-5">
