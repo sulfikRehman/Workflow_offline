@@ -146,3 +146,97 @@ export function timeUnitFactor(unit: string): number | null {
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+/**
+ * Progress toward a habit's long-term goal: how many days since the goal was set reached the
+ * daily target. `values` maps YYYY-MM-DD to the amount logged.
+ */
+export function goalProgress(
+  habit: Pick<Habit, 'target_value' | 'goal'>,
+  values: Record<string, number>
+): { done: number; total: number; pct: number; reached: boolean } | null {
+  if (!habit.goal) return null;
+  const { days, start } = habit.goal;
+  let done = 0;
+  for (const [iso, v] of Object.entries(values)) {
+    if (iso >= start && v >= habit.target_value) done++;
+  }
+  return {
+    done,
+    total: days,
+    pct: Math.min(100, Math.floor((done / days) * 100)),
+    reached: done >= days,
+  };
+}
+
+/** One bar of a completion chart. */
+export type Bucket = {
+  /** First day of the bucket, YYYY-MM-DD. */
+  start: string;
+  /** Last day of the bucket, YYYY-MM-DD. */
+  end: string;
+  /** Scheduled habit-days in the bucket (days before a habit existed, and future days, are left out). */
+  scheduled: number;
+  /** Of those, how many reached the daily target. */
+  done: number;
+  /** done / scheduled as a whole percent; null when nothing was scheduled. */
+  pct: number | null;
+};
+
+export type ChartHabit = Pick<Habit, 'id' | 'days' | 'target_value'> & {
+  /** First day this habit counts, YYYY-MM-DD (the day it was created, or its earliest entry). */
+  from: string;
+};
+
+/**
+ * Splits the `count * size` days ending on `end` into `count` buckets of `size` days (oldest
+ * first) and counts, for each, how many scheduled habit-days reached the target.
+ * A day counts for a habit only if it is scheduled, is on or after the habit's `from` day, and is
+ * not after `end` or `today`.
+ */
+export function completionBuckets(
+  habits: ChartHabit[],
+  valueOn: (habitId: string, iso: string) => number,
+  end: Date,
+  size: number,
+  count: number,
+  today: Date = new Date()
+): Bucket[] {
+  const todayIso = toISODate(today);
+  const out: Bucket[] = [];
+  for (let b = 0; b < count; b++) {
+    const first = new Date(end);
+    first.setDate(first.getDate() - (count - b) * size + 1);
+    let scheduled = 0;
+    let done = 0;
+    const d = new Date(first);
+    for (let i = 0; i < size; i++) {
+      const iso = toISODate(d);
+      if (iso <= todayIso) {
+        for (const h of habits) {
+          if (iso < h.from || !isActiveDay(h, d)) continue;
+          scheduled++;
+          if (valueOn(h.id, iso) >= h.target_value) done++;
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    const last = new Date(d);
+    last.setDate(last.getDate() - 1);
+    out.push({
+      start: toISODate(first),
+      end: toISODate(last),
+      scheduled,
+      done,
+      pct: scheduled ? Math.round((done / scheduled) * 100) : null,
+    });
+  }
+  return out;
+}
+
+/** Overall completion over a list of buckets (total done / total scheduled), or null. */
+export function overallPct(buckets: Bucket[]): number | null {
+  const s = buckets.reduce((a, b) => a + b.scheduled, 0);
+  const d = buckets.reduce((a, b) => a + b.done, 0);
+  return s ? Math.round((d / s) * 100) : null;
+}

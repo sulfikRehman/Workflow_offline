@@ -3,6 +3,8 @@ import type { FormEvent } from 'react';
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { WEEK_ORDER } from '@/lib/stats';
+import { HABIT_COLORS } from '@/lib/colors';
+import { GOAL_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
 import { backdropCls, sheetAnimCls } from './ui';
@@ -13,6 +15,9 @@ export type HabitFormData = {
   unit: string;
   target_value: number;
   days: number[];
+  color: string;
+  /** Long-term goal in days, or null for none. */
+  goal_days: number | null;
 };
 
 type Props = {
@@ -62,6 +67,9 @@ export default function HabitForm({
   const [targetText, setTargetText] = useState(String(habit?.target_value ?? 30));
   const [icon, setIcon] = useState(habit?.icon ?? 'BookOpen');
   const [days, setDays] = useState<number[]>(habit?.days ?? ALL_DAYS);
+  const [color, setColor] = useState(habit?.color ?? HABIT_COLORS[0]);
+  const [goalOn, setGoalOn] = useState(!!habit?.goal);
+  const [goalText, setGoalText] = useState(String(habit?.goal?.days ?? 100));
   const [error, setError] = useState<string | null>(null);
   useEscape(onClose);
 
@@ -80,12 +88,18 @@ export default function HabitForm({
     if (!Number.isFinite(target) || target <= 0) {
       return setError('The daily target must be more than 0.');
     }
+    const goal = Number(goalText);
+    if (goalOn && (!Number.isInteger(goal) || goal < 1 || goal > GOAL_MAX)) {
+      return setError(`The goal must be a whole number of days from 1 to ${GOAL_MAX}.`);
+    }
     onSave({
       name: name.trim(),
       icon,
       unit: unit.trim() || 'count',
       target_value: target,
       days,
+      color,
+      goal_days: goalOn ? goal : null,
     });
   }
 
@@ -222,6 +236,72 @@ export default function HabitForm({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-neutral-400">Colour</label>
+            <div className="grid grid-cols-6 gap-2">
+              {HABIT_COLORS.map((c) => {
+                const sel = c.toLowerCase() === color.toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setColor(c)}
+                    aria-pressed={sel}
+                    aria-label={`Colour ${c}`}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition active:scale-95 ${
+                      sel ? 'border-white' : 'border-neutral-800 hover:border-neutral-600'
+                    }`}
+                  >
+                    <span
+                      className="h-5 w-5 rounded-full transition-transform duration-200"
+                      style={{ backgroundColor: c, transform: sel ? 'scale(1.2)' : 'scale(1)' }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+              <input
+                type="checkbox"
+                checked={goalOn}
+                onChange={(e) => setGoalOn(e.target.checked)}
+                className="h-4 w-4 accent-green-500"
+              />
+              Long-term goal
+            </label>
+            <div className={`collapsible${goalOn ? ' open' : ''}`}>
+              <div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="shrink-0 text-xs text-neutral-400">Reach the target on</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={GOAL_MAX}
+                    step={1}
+                    value={goalText}
+                    disabled={!goalOn}
+                    onChange={(e) => {
+                      setGoalText(e.target.value);
+                      setError(null);
+                    }}
+                    aria-label="Goal in days"
+                    className={`${inputCls} text-center`}
+                  />
+                  <span className="shrink-0 text-xs text-neutral-400">days</span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-neutral-500">
+                  {habit?.goal
+                    ? `Counting days since ${habit.goal.start}. Changing the number keeps that start day.`
+                    : 'Counts the days you reach the daily target, starting from the day you set the goal.'}
+                </p>
+              </div>
             </div>
           </div>
         </div>

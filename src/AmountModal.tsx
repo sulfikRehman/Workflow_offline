@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { getHabitIcon } from '@/lib/icons';
 import { parseISODate, round2 } from '@/lib/stats';
 import { todayISO } from '@/lib/date';
+import { NOTE_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
 import { backdropCls, sheetAnimCls } from './ui';
@@ -13,7 +14,9 @@ type Props = {
   date: string;
   /** What is logged for that day right now. */
   current: number;
-  onSave: (value: number) => void;
+  /** The note saved for that day ('' if none). */
+  note: string;
+  onSave: (value: number, note: string) => void;
   onClose: () => void;
   /** True while the window plays its closing animation. */
   closing?: boolean;
@@ -30,8 +33,17 @@ function dayText(iso: string): string {
   });
 }
 
-export default function AmountModal({ habit, date, current, onSave, onClose, closing }: Props) {
+export default function AmountModal({
+  habit,
+  date,
+  current,
+  note: savedNote,
+  onSave,
+  onClose,
+  closing,
+}: Props) {
   const [text, setText] = useState(current > 0 ? String(round2(current)) : '');
+  const [note, setNote] = useState(savedNote);
   const [error, setError] = useState<string | null>(null);
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
@@ -43,7 +55,7 @@ export default function AmountModal({ habit, date, current, onSave, onClose, clo
       setError(`Enter a number from 0 to ${MAX}.`);
       return;
     }
-    onSave(round2(value));
+    onSave(round2(value), note.trim());
   }
 
   const chipCls =
@@ -117,7 +129,22 @@ export default function AmountModal({ habit, date, current, onSave, onClose, clo
           </button>
         </div>
 
-        <div className="mt-5 flex gap-2">
+        <label className="mb-1.5 mt-4 block text-xs font-medium text-neutral-400">
+          Note (optional)
+        </label>
+        <textarea
+          value={note}
+          maxLength={NOTE_MAX}
+          rows={2}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. skipped, was sick"
+          className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-green-500 focus:outline-none"
+        />
+        <p className="mt-1 text-right text-[11px] tabular-nums text-neutral-600">
+          {note.length}/{NOTE_MAX}
+        </p>
+
+        <div className="mt-3 flex gap-2">
           <button
             type="button"
             onClick={onClose}

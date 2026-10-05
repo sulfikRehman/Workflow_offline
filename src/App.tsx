@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as store from '@/lib/store';
-import type { Habit, HabitEntry } from '@/lib/store';
+import type { Habit, HabitEntry, HabitNote } from '@/lib/store';
 import { getWeekDays, shiftWeek, toISODate, isToday, shortDate, todayISO } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
 import { haptic } from '@/lib/haptics';
@@ -16,6 +16,7 @@ import {
 } from '@/lib/stats';
 import { dismissNudge, getNudge, markBackupSaved } from '@/lib/backupNudge';
 import type { Nudge } from '@/lib/backupNudge';
+import AboutModal from './AboutModal';
 import AmountModal from './AmountModal';
 import HabitCalendar from './HabitCalendar';
 import HabitForm from './HabitForm';
@@ -23,6 +24,7 @@ import type { HabitFormData } from './HabitForm';
 import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
+import TrendsModal from './TrendsModal';
 import { usePresence } from './usePresence';
 import {
   Archive,
@@ -32,12 +34,16 @@ import {
   ChevronRight,
   Flame,
   Pencil,
+  ArrowUpDown,
+  Check as CheckIcon,
   Plus,
   Target,
   Timer,
+  TrendingUp,
 } from 'lucide-react';
 
 type EntryMap = Record<string, Record<string, number>>;
+const NO_VALUES: Record<string, number> = {};
 
 function csvEscape(s: string): string {
   if (/[",\n]/.test(s)) {
@@ -61,6 +67,7 @@ function download(filename: string, text: string, type: string) {
 export default function App() {
   const [habits, setHabits] = useState<Habit[]>(() => store.getHabits());
   const [entries, setEntries] = useState<HabitEntry[]>(() => store.getEntries());
+  const [notes, setNotes] = useState<HabitNote[]>(() => store.getNotes());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -68,6 +75,9 @@ export default function App() {
   const [amountFor, setAmountFor] = useState<{ habitId: string; date: string } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
+  const [trendsOpen, setTrendsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [nudge, setNudge] = useState<Nudge>(() => getNudge(store.getEntries().length > 0));
@@ -87,6 +97,16 @@ export default function App() {
     return m;
   }, [entries]);
 
+  // Notes, keyed habit -> date -> text
+  const noteMap: Record<string, Record<string, string>> = useMemo(() => {
+    const m: Record<string, Record<string, string>> = {};
+    for (const n of notes) {
+      if (!m[n.habit_id]) m[n.habit_id] = {};
+      m[n.habit_id][n.date] = n.text;
+    }
+    return m;
+  }, [notes]);
+
   const valueOnFor = (habitId: string) => (iso: string) => entryMap[habitId]?.[iso] ?? 0;
 
   // Current and best streak for each habit (scheduled days only)
@@ -103,6 +123,19 @@ export default function App() {
     return out;
   }, [activeHabits, entryMap]);
 
+  // What the Trends window needs: each habit and the first day it counts from.
+  const trendHabits = useMemo(
+    () =>
+      activeHabits.map((h) => {
+        const created = new Date(h.created_at);
+        const createdIso = Number.isNaN(created.getTime()) ? '0000-00-00' : toISODate(created);
+        const firstEntry = Object.keys(entryMap[h.id] ?? {}).sort()[0];
+        const from = firstEntry && firstEntry < createdIso ? firstEntry : createdIso;
+        return { ...h, from };
+      }),
+    [activeHabits, entryMap]
+  );
+
   const editingHabit = habits.find((h) => h.id === editingId) ?? null;
   const calendarHabit = activeHabits.find((h) => h.id === calendarId) ?? null;
   const amountHabit = habits.find((h) => h.id === amountFor?.habitId) ?? null;
@@ -117,16 +150,27 @@ export default function App() {
           habit: amountHabit,
           date: amountFor.date,
           current: entryMap[amountHabit.id]?.[amountFor.date] ?? 0,
+          note: noteMap[amountHabit.id]?.[amountFor.date] ?? '',
         }
       : null
   );
   const timerP = usePresence(timerOpen ? true : null);
+  const trendsP = usePresence(trendsOpen ? true : null);
+  const aboutP = usePresence(aboutOpen ? true : null);
   const noticeP = usePresence(notice && !error ? notice : null);
   const errorP = usePresence(error);
   const nudgeP = usePresence(nudge);
 
   // The page behind a window stays still while the window is open.
-  const windowOpen = !!(addP.item || editP.item || calendarP.item || amountP.item || timerP.item);
+  const windowOpen = !!(
+    addP.item ||
+    editP.item ||
+    calendarP.item ||
+    amountP.item ||
+    timerP.item ||
+    trendsP.item ||
+    aboutP.item
+  );
   useEffect(() => {
     if (!windowOpen) return;
     const before = document.body.style.overflow;
@@ -168,11 +212,31 @@ export default function App() {
     setAmountFor({ habitId: habit.id, date });
   }
 
-  function saveAmount(value: number) {
+  function saveAmount(value: number, note: string) {
     if (!amountHabit || !amountFor) return;
-    if (logEntry(amountHabit, amountFor.date, value)) {
-      haptic('success');
-      setAmountFor(null);
+    const { date } = amountFor;
+    const had = entryMap[amountHabit.id]?.[date] ?? 0;
+    // A note alone should not create an empty "0" entry.
+    if (!(value === 0 && had === 0) && !logEntry(amountHabit, date, value)) return;
+    try {
+      const saved = store.setNote(amountHabit.id, date, note);
+      setNotes((prev) => {
+        const rest = prev.filter((n) => !(n.habit_id === amountHabit.id && n.date === date));
+        return saved ? [...rest, saved] : rest;
+      });
+    } catch (err) {
+      fail('Could not save the note. Your phone storage may be full or blocked.', err);
+      return;
+    }
+    haptic('success');
+    setAmountFor(null);
+  }
+
+  function moveHabit(habit: Habit, direction: 'up' | 'down') {
+    try {
+      setHabits(store.moveHabit(habit.id, direction));
+    } catch (err) {
+      fail('Could not change the order. Your phone storage may be full or blocked.', err);
     }
   }
 
@@ -196,6 +260,7 @@ export default function App() {
       store.deleteHabit(habit.id);
       setHabits((prev) => prev.filter((h) => h.id !== habit.id));
       setEntries((prev) => prev.filter((e) => e.habit_id !== habit.id));
+      setNotes((prev) => prev.filter((n) => n.habit_id !== habit.id));
       if (editingId === habit.id) setEditingId(null);
       if (calendarId === habit.id) setCalendarId(null);
       if (amountFor?.habitId === habit.id) setAmountFor(null);
@@ -267,19 +332,32 @@ export default function App() {
   function downloadCSV() {
     if (habits.length === 0) return;
     const habitById = new Map(habits.map((h) => [h.id, h]));
-    const rows: string[] = ['Habit,Date,Value,Unit,Target,Completed'];
-    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-    for (const e of sorted) {
+    const rows: string[] = ['Habit,Date,Value,Unit,Target,Completed,Note'];
+    // One row per day that has an amount or a note.
+    const days = new Map<string, { habit: Habit; date: string; value: number; note: string }>();
+    for (const e of entries) {
       const h = habitById.get(e.habit_id);
+      if (h) days.set(`${h.id}|${e.date}`, { habit: h, date: e.date, value: e.value, note: '' });
+    }
+    for (const n of notes) {
+      const h = habitById.get(n.habit_id);
       if (!h) continue;
+      const key = `${h.id}|${n.date}`;
+      const row = days.get(key);
+      if (row) row.note = n.text;
+      else days.set(key, { habit: h, date: n.date, value: 0, note: n.text });
+    }
+    const sorted = [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
+    for (const r of sorted) {
       rows.push(
         [
-          csvEscape(h.name),
-          e.date,
-          e.value,
-          csvEscape(h.unit),
-          h.target_value,
-          e.value >= h.target_value ? 'Yes' : 'No',
+          csvEscape(r.habit.name),
+          r.date,
+          r.value,
+          csvEscape(r.habit.unit),
+          r.habit.target_value,
+          r.value >= r.habit.target_value ? 'Yes' : 'No',
+          csvEscape(r.note),
         ].join(',')
       );
     }
@@ -306,6 +384,7 @@ export default function App() {
       store.importBackup(await file.text());
       setHabits(store.getHabits());
       setEntries(store.getEntries());
+      setNotes(store.getNotes());
       setEditingId(null);
       setCalendarId(null);
       setAmountFor(null);
@@ -362,6 +441,7 @@ export default function App() {
               onSaveBackup={saveBackup}
               onRestoreBackup={() => fileRef.current?.click()}
               onExportCSV={downloadCSV}
+              onAbout={() => setAboutOpen(true)}
               canExport={habits.length > 0}
             />
           </div>
@@ -477,6 +557,30 @@ export default function App() {
           </div>
         )}
 
+        {/* Trends and reorder */}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <button
+            onClick={() => setTrendsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95"
+          >
+            <TrendingUp className="h-4 w-4" /> Trends
+          </button>
+          {activeHabits.length >= 2 && (
+            <button
+              onClick={() => setReordering((r) => !r)}
+              aria-pressed={reordering}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition active:scale-95 ${
+                reordering
+                  ? 'border-green-500 bg-green-500/15 text-green-400'
+                  : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'
+              }`}
+            >
+              {reordering ? <CheckIcon className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />}
+              {reordering ? 'Done' : 'Reorder'}
+            </button>
+          )}
+        </div>
+
         {/* Habit grid */}
         {activeHabits.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/30 py-16 text-center">
@@ -513,11 +617,23 @@ export default function App() {
                     habit={habit}
                     weekDays={weekDays}
                     valueOn={valueOnFor(habit.id)}
+                    allValues={entryMap[habit.id] ?? NO_VALUES}
                     streak={streaks[habit.id] ?? { current: 0, best: 0 }}
                     onToggle={(date) => toggleComplete(habit, date)}
                     onAmount={(date) => openAmount(habit, date)}
                     onEdit={() => setEditingId(habit.id)}
                     onCalendar={() => setCalendarId(habit.id)}
+                    hasNote={(iso) => !!noteMap[habit.id]?.[iso]}
+                    reorder={
+                      reordering && activeHabits.length >= 2
+                        ? {
+                            canUp: i > 0,
+                            canDown: i < activeHabits.length - 1,
+                            onUp: () => moveHabit(habit, 'up'),
+                            onDown: () => moveHabit(habit, 'down'),
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               ))}
@@ -615,6 +731,7 @@ export default function App() {
           habit={calendarP.item}
           valueOn={valueOnFor(calendarP.item.id)}
           streak={streaks[calendarP.item.id] ?? { current: 0, best: 0 }}
+          notes={noteMap[calendarP.item.id] ?? {}}
           onToggle={(iso) => toggleComplete(calendarP.item!, iso)}
           onAmount={(iso) => openAmount(calendarP.item!, iso)}
           onClose={() => setCalendarId(null)}
@@ -628,8 +745,30 @@ export default function App() {
           habit={amountP.item.habit}
           date={amountP.item.date}
           current={amountP.item.current}
+          note={amountP.item.note}
           onSave={saveAmount}
           onClose={() => setAmountFor(null)}
+        />
+      )}
+
+      {trendsP.item && (
+        <TrendsModal
+          key={`trends${trendsP.id}`}
+          closing={trendsP.closing}
+          habits={trendHabits}
+          valueOn={(id, iso) => entryMap[id]?.[iso] ?? 0}
+          onClose={() => setTrendsOpen(false)}
+        />
+      )}
+
+      {aboutP.item && (
+        <AboutModal
+          key={`about${aboutP.id}`}
+          closing={aboutP.closing}
+          habitCount={habits.length}
+          checkIns={entries.length}
+          noteCount={notes.length}
+          onClose={() => setAboutOpen(false)}
         />
       )}
 

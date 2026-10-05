@@ -7,6 +7,7 @@ import {
   isActiveDay,
   monthSummary,
   monthWeeks,
+  parseISODate,
   round2,
   scheduleLabel,
 } from '@/lib/stats';
@@ -22,6 +23,8 @@ type Props = {
   streak: { current: number; best: number };
   onToggle: (iso: string) => void;
   onAmount: (iso: string) => void;
+  /** Notes for this habit, date (YYYY-MM-DD) -> text. */
+  notes: Record<string, string>;
   onClose: () => void;
   /** True while the window plays its closing animation. */
   closing?: boolean;
@@ -35,6 +38,7 @@ export default function HabitCalendar({
   streak,
   onToggle,
   onAmount,
+  notes,
   onClose,
   closing,
 }: Props) {
@@ -47,6 +51,10 @@ export default function HabitCalendar({
   const atCurrentMonth = view.y === now.getFullYear() && view.m === now.getMonth();
   const weeks = monthWeeks(view.y, view.m);
   const summary = monthSummary(habit, valueOn, view.y, view.m, now);
+  const monthPrefix = `${view.y}-${String(view.m + 1).padStart(2, '0')}-`;
+  const monthNotes = Object.keys(notes)
+    .filter((iso) => iso.startsWith(monthPrefix))
+    .sort();
   const title = new Date(view.y, view.m, 1).toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
@@ -166,7 +174,9 @@ export default function HabitCalendar({
                     onTap={() => onToggle(iso)}
                     onLong={() => onAmount(iso)}
                     title={`${iso}: ${round2(val)} / ${round2(habit.target_value)} ${habit.unit}`}
-                    aria-label={`${iso}, ${done ? 'done' : partial ? 'partly done' : 'not done'}`}
+                    aria-label={`${iso}, ${done ? 'done' : partial ? 'partly done' : 'not done'}${
+                      notes[iso] ? ', has a note' : ''
+                    }`}
                     className={`flex aspect-square items-center justify-center rounded-lg border text-xs font-medium tabular-nums transition active:scale-95 disabled:cursor-default disabled:opacity-25 ${
                       done ? 'border-transparent text-neutral-950' : 'text-neutral-300'
                     } ${
@@ -180,7 +190,7 @@ export default function HabitCalendar({
                     }`}
                   >
                     <span
-                      className="flex h-full w-full items-center justify-center rounded-lg transition-colors duration-200"
+                      className="relative flex h-full w-full items-center justify-center rounded-lg transition-colors duration-200"
                       style={{
                         backgroundColor: done
                           ? habit.color
@@ -190,6 +200,12 @@ export default function HabitCalendar({
                       }}
                     >
                       {d.getDate()}
+                      {notes[iso] && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
+                        />
+                      )}
                     </span>
                   </LongPressButton>
                 );
@@ -198,8 +214,34 @@ export default function HabitCalendar({
           ))}
         </div>
 
+        {monthNotes.length > 0 && (
+          <div key={`n-${view.y}-${view.m}`} className="fade-anim mt-4">
+            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+              Notes this month
+            </p>
+            <ul className="space-y-1.5">
+              {monthNotes.map((iso) => (
+                <li
+                  key={iso}
+                  className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-xs"
+                >
+                  <span className="mr-2 font-medium tabular-nums text-amber-300">
+                    {parseISODate(iso).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                  <span className="whitespace-pre-wrap break-words text-neutral-300">
+                    {notes[iso]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <p className="mt-3 text-center text-[11px] text-neutral-500">
-          Tap a day to mark it done · hold it to enter an amount. Dashed days aren&apos;t scheduled.
+          Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = has a note.
         </p>
       </div>
     </div>

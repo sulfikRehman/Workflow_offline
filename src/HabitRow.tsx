@@ -1,7 +1,7 @@
-import { CalendarDays, Check, Flame, Pencil, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarDays, Check, Flame, Pencil, Trophy, TrendingUp } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { dayLabel, isToday, toISODate, todayISO } from '@/lib/date';
-import { activeDaysIn, isActiveDay, round2, scheduleLabel } from '@/lib/stats';
+import { activeDaysIn, goalProgress, isActiveDay, round2, scheduleLabel } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
 
@@ -15,6 +15,8 @@ type Props = {
   weekDays: Date[];
   /** How much is logged on a date (YYYY-MM-DD); 0 when nothing is. */
   valueOn: (iso: string) => number;
+  /** Everything logged for this habit (date -> amount); used for the long-term goal. */
+  allValues: Record<string, number>;
   streak: { current: number; best: number };
   /** Tap on a day: mark done / not done. */
   onToggle: (iso: string) => void;
@@ -22,17 +24,24 @@ type Props = {
   onAmount: (iso: string) => void;
   onEdit: () => void;
   onCalendar: () => void;
+  /** Does this date have a note? */
+  hasNote: (iso: string) => boolean;
+  /** Present while the list is being reordered. */
+  reorder?: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void };
 };
 
 export default function HabitRow({
   habit,
   weekDays,
   valueOn,
+  allValues,
   streak,
   onToggle,
   onAmount,
   onEdit,
   onCalendar,
+  hasNote,
+  reorder,
 }: Props) {
   const Icon = getHabitIcon(habit.icon);
   const weekVals = weekDays.map((d) => valueOn(toISODate(d)));
@@ -42,6 +51,7 @@ export default function HabitRow({
   const todayVal = valueOn(todayISO());
   const todayPct = pct(todayVal, habit.target_value);
   const schedule = scheduleLabel(habit.days);
+  const goal = goalProgress(habit, allValues);
   const iconBtn =
     'flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white active:scale-95';
 
@@ -50,6 +60,26 @@ export default function HabitRow({
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
+          {reorder && (
+            <span className="fade-anim flex shrink-0 flex-col gap-1">
+              <button
+                onClick={reorder.onUp}
+                disabled={!reorder.canUp}
+                aria-label={`Move ${habit.name} up`}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-30"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <button
+                onClick={reorder.onDown}
+                disabled={!reorder.canDown}
+                aria-label={`Move ${habit.name} down`}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-30"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </button>
+            </span>
+          )}
           <div
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
             style={{ backgroundColor: `${habit.color}1a`, color: habit.color }}
@@ -87,6 +117,29 @@ export default function HabitRow({
         </div>
       </div>
 
+      {/* Long-term goal */}
+      {goal && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[11px]">
+            <span
+              className={`flex items-center gap-1 ${goal.reached ? 'text-green-400' : 'text-neutral-400'}`}
+            >
+              <Trophy className="h-3.5 w-3.5" />
+              {goal.reached ? 'Goal reached!' : 'Goal'}
+            </span>
+            <span className="tabular-nums text-neutral-500">
+              {goal.done} / {goal.total} days
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${goal.pct}%`, backgroundColor: habit.color }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Week grid */}
       <div key={toISODate(weekDays[0])} className="fade-anim mt-4 grid grid-cols-7 gap-1.5">
         {weekDays.map((d, i) => {
@@ -107,7 +160,9 @@ export default function HabitRow({
               title={`${round2(val)} / ${round2(habit.target_value)} ${habit.unit}${
                 scheduled ? '' : ' (not scheduled)'
               }`}
-              aria-label={`${iso}: ${round2(val)} of ${round2(habit.target_value)} ${habit.unit}`}
+              aria-label={`${iso}: ${round2(val)} of ${round2(habit.target_value)} ${habit.unit}${
+                hasNote(iso) ? ', has a note' : ''
+              }`}
             >
               <span
                 className={`text-[10px] font-medium ${today ? 'text-green-400' : 'text-neutral-500'}`}
@@ -124,7 +179,15 @@ export default function HabitRow({
               >
                 {done ? <Check className="check-anim h-3.5 w-3.5" /> : partial ? Math.round(val) : ''}
               </span>
-              <span className="text-[9px] text-neutral-600">{d.getDate()}</span>
+              <span className="relative text-[9px] text-neutral-600">
+                {d.getDate()}
+                {hasNote(iso) && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-1.5 top-0 h-1 w-1 rounded-full bg-amber-400"
+                  />
+                )}
+              </span>
             </LongPressButton>
           );
         })}

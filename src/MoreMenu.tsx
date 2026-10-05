@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Menu, Save, Upload, X } from 'lucide-react';
+import { Download, Info, Menu, Save, Upload, X } from 'lucide-react';
 import {
   LEVELS,
   getHapticLevel,
@@ -15,6 +15,7 @@ type Props = {
   onSaveBackup: () => void;
   onRestoreBackup: () => void;
   onExportCSV: () => void;
+  onAbout: () => void;
   /** CSV export needs at least one habit. */
   canExport: boolean;
 };
@@ -32,6 +33,7 @@ export default function MoreMenu({
   onSaveBackup,
   onRestoreBackup,
   onExportCSV,
+  onAbout,
   canExport,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -96,7 +98,7 @@ export default function MoreMenu({
       {menu.item && (
         <div
           aria-label="Menu"
-          className={`menu-anim${menu.closing ? ' closing' : ''} absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-2xl shadow-black/50`}
+          className={`menu-anim${menu.closing ? ' closing' : ''} absolute right-0 top-full z-30 mt-2 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-2xl shadow-black/50`}
         >
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
             Your data
@@ -182,6 +184,17 @@ export default function MoreMenu({
               </div>
             </>
           )}
+
+          <div className="my-2 border-t border-neutral-800" />
+          <button onClick={() => run(onAbout)} className={itemCls}>
+            <Info className="h-4 w-4 shrink-0 text-neutral-400" />
+            <span>
+              About
+              <span className="block text-[11px] text-neutral-500">
+                What this app is, tips and your data
+              </span>
+            </span>
+          </button>
         </div>
       )}
     </div>

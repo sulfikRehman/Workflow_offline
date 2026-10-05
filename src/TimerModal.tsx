@@ -7,10 +7,12 @@ import { round2, timeUnitFactor } from '@/lib/stats';
 import { formatMs, nextBreakAfter } from '@/lib/timer';
 import type { Habit } from '@/lib/store';
 import TimerDial from '@/TimerDial';
+import PomodoroPanel from './PomodoroPanel';
 import { backdropCls, sheetAnimCls } from './ui';
 import { usePresence } from './usePresence';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
+type Mode = 'timer' | 'pomodoro';
 type Alarm = null | 'break' | 'end';
 
 const SETTINGS_KEY = 'habitflow:timer-settings';
@@ -57,6 +59,8 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
   const [breakStr, setBreakStr] = useState(String(initial.breakEvery));
   const [breakOn, setBreakOn] = useState(initial.breakOn);
 
+  const [mode, setMode] = useState<Mode>('timer');
+  const [pomoActive, setPomoActive] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [alarm, setAlarm] = useState<Alarm>(null);
   const [remaining, setRemaining] = useState(0);
@@ -211,8 +215,14 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
   }
 
   function requestClose() {
-    if (locked && !window.confirm('Stop the timer and close?')) return;
+    if ((locked || pomoActive) && !window.confirm('Stop the timer and close?')) return;
     onClose();
+  }
+
+  /** A Pomodoro was stopped: offer to add its focus minutes to a habit. */
+  function pomodoroStopped(minutes: number) {
+    setLoggedMsg(null);
+    setPendingLog(minutes >= 1 ? minutes : null);
   }
 
   function adjust(delta: number) {
@@ -241,6 +251,85 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
   const stepCls =
     'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40';
 
+  const banners = (
+    <>
+          {alarmP.item && (
+            <div className={`collapse${alarmP.closing ? ' closing' : ''}`}>
+              <div>
+                <div
+                  role="alert"
+                  className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium text-green-300">
+                    <BellRing className="h-5 w-5" />
+                    {alarmP.item === 'end' ? "Time's up!" : 'Time for a break!'}
+                  </div>
+                  <button
+                    onClick={() => (alarmP.item === 'end' ? reset() : setAlarm(null))}
+                    className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950 active:scale-95"
+                  >
+                    {alarmP.item === 'end' ? 'Stop' : 'Dismiss'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+  
+          {offerP.item !== null && logTarget && (
+            <div className={`collapse${offerP.closing ? ' closing' : ''}`}>
+              <div>
+                <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
+                  <p className="text-sm font-medium text-white">
+                    Add {round2(offerP.item)} min to a habit?
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={logTarget.id}
+                      onChange={(e) => setLogHabitId(e.target.value)}
+                      aria-label="Habit to add the time to"
+                      className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    >
+                      {loggable.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.name} ({h.unit})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={logTimeNow}
+                      className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => setPendingLog(null)}
+                      className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
+                    >
+                      No
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-neutral-500">
+                    Only habits measured in minutes or hours are listed. The time is added to today.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {loggedP.item && (
+            <div className={`collapse${loggedP.closing ? ' closing' : ''}`}>
+              <div>
+                <p
+                  role="status"
+                  className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
+                >
+                  {loggedP.item}
+                </p>
+              </div>
+            </div>
+          )}
+    </>
+  );
+
   return (
     <div
       className={backdropCls(closing)}
@@ -266,209 +355,165 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
           </button>
         </div>
 
-        <div className="mt-4">
-          <TimerDial
-            duration={duration}
-            shownMin={shownMs / 60000}
-            breakEvery={breakActive ? breakEvery : 0}
-            locked={phase !== 'idle'}
-            onChange={setDuration}
-          >
-            <p
-              className={`font-semibold tabular-nums tracking-tight text-white ${
-                timeText.length > 5 ? 'text-3xl' : 'text-5xl'
+        <div className="mt-4 flex gap-1 rounded-lg border border-neutral-800 p-1">
+          {(
+            [
+              ['timer', 'Timer'],
+              ['pomodoro', 'Pomodoro'],
+            ] as [Mode, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setMode(key)}
+              aria-pressed={mode === key}
+              disabled={mode !== key && (phase !== 'idle' || pomoActive)}
+              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
+                mode === key ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
               }`}
-              aria-live="off"
             >
-              {timeText}
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">{caption}</p>
-          </TimerDial>
-
-          <div className={`collapsible${phase === 'idle' ? ' open' : ''}`}>
-            <div>
-              <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => adjust(-5)} className={chipCls}>
-                  −5
-                </button>
-                <button type="button" onClick={() => adjust(-1)} className={chipCls}>
-                  −1
-                </button>
-                <button type="button" onClick={() => adjust(1)} className={chipCls}>
-                  +1
-                </button>
-                <button type="button" onClick={() => adjust(5)} className={chipCls}>
-                  +5
-                </button>
-              </div>
-              <p className="mt-2 text-center text-[11px] text-neutral-500">
-                One turn of the dial = 60 minutes (up to 12 hours).
-                {breakActive && ' Amber dots mark break reminders.'}
-              </p>
-            </div>
-          </div>
+              {label}
+            </button>
+          ))}
         </div>
 
-        {alarmP.item && (
-          <div className={`collapse${alarmP.closing ? ' closing' : ''}`}>
-            <div>
-              <div
-                role="alert"
-                className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
-              >
-                <div className="flex items-center gap-2 text-sm font-medium text-green-300">
-                  <BellRing className="h-5 w-5" />
-                  {alarmP.item === 'end' ? "Time's up!" : 'Time for a break!'}
-                </div>
-                <button
-                  onClick={() => (alarmP.item === 'end' ? reset() : setAlarm(null))}
-                  className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950 active:scale-95"
-                >
-                  {alarmP.item === 'end' ? 'Stop' : 'Dismiss'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {offerP.item !== null && logTarget && (
-          <div className={`collapse${offerP.closing ? ' closing' : ''}`}>
-            <div>
-              <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-                <p className="text-sm font-medium text-white">
-                  Add {round2(offerP.item)} min to a habit?
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <select
-                    value={logTarget.id}
-                    onChange={(e) => setLogHabitId(e.target.value)}
-                    aria-label="Habit to add the time to"
-                    className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
-                  >
-                    {loggable.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.name} ({h.unit})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={logTimeNow}
-                    className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => setPendingLog(null)}
-                    className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
-                  >
-                    No
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[11px] text-neutral-500">
-                  Only habits measured in minutes or hours are listed. The time is added to today.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        {loggedP.item && (
-          <div className={`collapse${loggedP.closing ? ' closing' : ''}`}>
-            <div>
+        {mode === 'timer' ? (
+          <>
+          <div className="mt-4">
+            <TimerDial
+              duration={duration}
+              shownMin={shownMs / 60000}
+              breakEvery={breakActive ? breakEvery : 0}
+              locked={phase !== 'idle'}
+              onChange={setDuration}
+            >
               <p
-                role="status"
-                className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
+                className={`font-semibold tabular-nums tracking-tight text-white ${
+                  timeText.length > 5 ? 'text-3xl' : 'text-5xl'
+                }`}
+                aria-live="off"
               >
-                {loggedP.item}
+                {timeText}
               </p>
+              <p className="mt-1 text-xs text-neutral-500">{caption}</p>
+            </TimerDial>
+  
+            <div className={`collapsible${phase === 'idle' ? ' open' : ''}`}>
+              <div>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => adjust(-5)} className={chipCls}>
+                    −5
+                  </button>
+                  <button type="button" onClick={() => adjust(-1)} className={chipCls}>
+                    −1
+                  </button>
+                  <button type="button" onClick={() => adjust(1)} className={chipCls}>
+                    +1
+                  </button>
+                  <button type="button" onClick={() => adjust(5)} className={chipCls}>
+                    +5
+                  </button>
+                </div>
+                <p className="mt-2 text-center text-[11px] text-neutral-500">
+                  One turn of the dial = 60 minutes (up to 12 hours).
+                  {breakActive && ' Amber dots mark break reminders.'}
+                </p>
+              </div>
             </div>
           </div>
-        )}
+            {banners}
 
-        <div className="mt-5">
-          <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
-            <input
-              type="checkbox"
-              checked={breakOn}
-              disabled={locked}
-              onChange={(e) => setBreakOn(e.target.checked)}
-              className="h-4 w-4 accent-green-500"
-            />
-            Break reminder: beep every (minutes)
-          </label>
-          <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-5">
+            <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+              <input
+                type="checkbox"
+                checked={breakOn}
+                disabled={locked}
+                onChange={(e) => setBreakOn(e.target.checked)}
+                className="h-4 w-4 accent-green-500"
+              />
+              Break reminder: beep every (minutes)
+            </label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Decrease break interval"
+                disabled={locked || !breakOn}
+                onClick={() => bumpBreak(-1)}
+                className={stepCls}
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={breakStr}
+                disabled={locked || !breakOn}
+                onChange={(e) => setBreakStr(e.target.value)}
+                className={`${inputCls} text-center`}
+              />
+              <button
+                type="button"
+                aria-label="Increase break interval"
+                disabled={locked || !breakOn}
+                onClick={() => bumpBreak(1)}
+                className={stepCls}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {breakOn && !breakActive && (
+              <p className="mt-1.5 text-[11px] text-amber-400">
+                The break interval must be at least 1 and shorter than the timer length, so no
+                break reminders will play.
+              </p>
+            )}
+          </div>
+  
+          <div className="mt-5 flex gap-2">
+            {phase === 'running' ? (
+              <button
+                onClick={pause}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+              >
+                <Pause className="h-4 w-4" /> Pause
+              </button>
+            ) : phase === 'paused' ? (
+              <button
+                onClick={resume}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+              >
+                <Play className="h-4 w-4" /> Resume
+              </button>
+            ) : (
+              <button
+                onClick={start}
+                disabled={duration < 1 || phase === 'finished'}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95 disabled:opacity-50"
+              >
+                <Play className="h-4 w-4" /> Start
+              </button>
+            )}
             <button
-              type="button"
-              aria-label="Decrease break interval"
-              disabled={locked || !breakOn}
-              onClick={() => bumpBreak(-1)}
-              className={stepCls}
+              onClick={reset}
+              disabled={phase === 'idle'}
+              className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40"
             >
-              <Minus className="h-4 w-4" />
-            </button>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              value={breakStr}
-              disabled={locked || !breakOn}
-              onChange={(e) => setBreakStr(e.target.value)}
-              className={`${inputCls} text-center`}
-            />
-            <button
-              type="button"
-              aria-label="Increase break interval"
-              disabled={locked || !breakOn}
-              onClick={() => bumpBreak(1)}
-              className={stepCls}
-            >
-              <Plus className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" /> Reset
             </button>
           </div>
-          {breakOn && !breakActive && (
-            <p className="mt-1.5 text-[11px] text-amber-400">
-              The break interval must be at least 1 and shorter than the timer length, so no
-              break reminders will play.
-            </p>
-          )}
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          {phase === 'running' ? (
-            <button
-              onClick={pause}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
-            >
-              <Pause className="h-4 w-4" /> Pause
-            </button>
-          ) : phase === 'paused' ? (
-            <button
-              onClick={resume}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
-            >
-              <Play className="h-4 w-4" /> Resume
-            </button>
-          ) : (
-            <button
-              onClick={start}
-              disabled={duration < 1 || phase === 'finished'}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95 disabled:opacity-50"
-            >
-              <Play className="h-4 w-4" /> Start
-            </button>
-          )}
-          <button
-            onClick={reset}
-            disabled={phase === 'idle'}
-            className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40"
-          >
-            <RotateCcw className="h-4 w-4" /> Reset
-          </button>
-        </div>
-
-        <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
-          Keep this screen open: the app keeps the display awake while the timer runs, but
-          beeps may not play if the phone is locked or the app is in the background.
-        </p>
+  
+          <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+            Keep this screen open: the app keeps the display awake while the timer runs, but
+            beeps may not play if the phone is locked or the app is in the background.
+          </p>
+          </>
+        ) : (
+          <>
+            <PomodoroPanel onActiveChange={setPomoActive} onStopped={pomodoroStopped} />
+            {banners}
+          </>
+        )}
       </div>
     </div>
   );
