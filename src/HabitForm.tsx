@@ -5,6 +5,7 @@ import { getHabitIcon } from '@/lib/icons';
 import { WEEK_ORDER } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { backdropCls, sheetAnimCls } from './ui';
 
 export type HabitFormData = {
   name: string;
@@ -21,6 +22,8 @@ type Props = {
   onClose: () => void;
   onArchive?: () => void;
   onDelete?: () => void;
+  /** True while the window plays its closing animation. */
+  closing?: boolean;
 };
 
 const ICON_OPTIONS = [
@@ -45,7 +48,14 @@ const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const inputCls =
   'w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-green-500 focus:outline-none';
 
-export default function HabitForm({ habit, onSave, onClose, onArchive, onDelete }: Props) {
+export default function HabitForm({
+  habit,
+  onSave,
+  onClose,
+  onArchive,
+  onDelete,
+  closing,
+}: Props) {
   const editing = !!habit;
   const [name, setName] = useState(habit?.name ?? '');
   const [unit, setUnit] = useState(habit?.unit ?? 'min');
@@ -91,13 +101,13 @@ export default function HabitForm({ habit, onSave, onClose, onArchive, onDelete 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className={backdropCls(closing)}
       onClick={onClose}
     >
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <h2 className="text-base font-semibold text-white">
           {editing ? 'Edit Habit' : 'New Habit'}

@@ -5,6 +5,7 @@ import { parseISODate, round2 } from '@/lib/stats';
 import { todayISO } from '@/lib/date';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { backdropCls, sheetAnimCls } from './ui';
 
 type Props = {
   habit: Habit;
@@ -14,6 +15,8 @@ type Props = {
   current: number;
   onSave: (value: number) => void;
   onClose: () => void;
+  /** True while the window plays its closing animation. */
+  closing?: boolean;
 };
 
 const MAX = 100000;
@@ -27,7 +30,7 @@ function dayText(iso: string): string {
   });
 }
 
-export default function AmountModal({ habit, date, current, onSave, onClose }: Props) {
+export default function AmountModal({ habit, date, current, onSave, onClose, closing }: Props) {
   const [text, setText] = useState(current > 0 ? String(round2(current)) : '');
   const [error, setError] = useState<string | null>(null);
   const Icon = getHabitIcon(habit.icon);
@@ -48,13 +51,13 @@ export default function AmountModal({ habit, date, current, onSave, onClose }: P
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className={backdropCls(closing)}
       onClick={onClose}
     >
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
+        className={`${sheetAnimCls(closing)} w-full max-w-md rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-center gap-3">
           <div

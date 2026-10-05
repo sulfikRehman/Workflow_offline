@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import {
   DIAL_MAX,
@@ -56,6 +56,15 @@ export default function TimerDial({
 
   const face = faceMinutes(shownMin);
   const thumb = polar(R, face);
+  // While the timer runs the arc and the dot glide between the 4-per-second updates. A big jump
+  // (the hand passing 12 o'clock on a timer over an hour) is shown at once, never spun backwards.
+  const prevFace = useRef(face);
+  const smooth = locked && Math.abs(face - prevFace.current) < 5;
+  useEffect(() => {
+    prevFace.current = face;
+  });
+  const glide = smooth ? 'stroke-dasharray 300ms linear' : 'none';
+  const glideTurn = smooth ? 'transform 300ms linear' : 'none';
   const marks = breakEvery >= 1 ? breakMarks(duration, breakEvery, shownMin) : [];
 
   /** Turns the pointer position into a new duration. Returns false if the touch was ignored. */
@@ -171,9 +180,9 @@ export default function TimerDial({
             fill="none"
             strokeWidth={16}
             strokeLinecap="round"
-            strokeDasharray={`${(face / 60) * CIRC} ${CIRC}`}
             transform={`rotate(-90 ${C} ${C})`}
             className="stroke-green-500"
+            style={{ strokeDasharray: `${(face / 60) * CIRC} ${CIRC}`, transition: glide }}
           />
         )}
 
@@ -185,13 +194,22 @@ export default function TimerDial({
 
         {/* the hand: a handle you can drag, or a small dot while the timer runs */}
         {locked ? (
-          <circle
-            cx={thumb.x}
-            cy={thumb.y}
-            r={7}
-            strokeWidth={3}
-            className="fill-neutral-950 stroke-green-400"
-          />
+          <g
+            style={{
+              transformBox: 'view-box',
+              transformOrigin: `${C}px ${C}px`,
+              transform: `rotate(${face * 6}deg)`,
+              transition: glideTurn,
+            }}
+          >
+            <circle
+              cx={C}
+              cy={C - R}
+              r={7}
+              strokeWidth={3}
+              className="fill-neutral-950 stroke-green-400"
+            />
+          </g>
         ) : (
           <circle
             cx={thumb.x}

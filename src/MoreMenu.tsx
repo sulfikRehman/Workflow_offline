@@ -9,6 +9,7 @@ import {
   setHapticsOn,
 } from '@/lib/haptics';
 import type { HapticLevel } from '@/lib/haptics';
+import { usePresence } from './usePresence';
 
 type Props = {
   onSaveBackup: () => void;
@@ -34,6 +35,8 @@ export default function MoreMenu({
   canExport,
 }: Props) {
   const [open, setOpen] = useState(false);
+  // Keeps the drop-down on screen while it plays its closing animation.
+  const menu = usePresence(open ? true : null, 140);
   const [vibrationOn, setVibrationOn] = useState(isHapticsOn);
   const [level, setLevel] = useState<HapticLevel>(getHapticLevel);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -85,13 +88,15 @@ export default function MoreMenu({
             : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'
         }`}
       >
-        {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        <span key={open ? 'x' : 'menu'} className="fade-anim inline-flex">
+          {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </span>
       </button>
 
-      {open && (
+      {menu.item && (
         <div
           aria-label="Menu"
-          className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-2xl shadow-black/50"
+          className={`menu-anim${menu.closing ? ' closing' : ''} absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-2xl shadow-black/50`}
         >
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
             Your data
@@ -161,7 +166,7 @@ export default function MoreMenu({
                       onClick={() => chooseLevel(l)}
                       disabled={!vibrationOn}
                       aria-pressed={level === l}
-                      className={`flex-1 rounded-md py-1.5 text-xs font-medium transition disabled:opacity-40 ${
+                      className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
                         level === l
                           ? 'bg-green-500 text-neutral-950'
                           : 'text-neutral-300 hover:bg-neutral-800'

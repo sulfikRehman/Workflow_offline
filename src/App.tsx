@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import * as store from '@/lib/store';
 import type { Habit, HabitEntry } from '@/lib/store';
 import { getWeekDays, shiftWeek, toISODate, isToday, shortDate, todayISO } from '@/lib/date';
@@ -22,6 +23,7 @@ import type { HabitFormData } from './HabitForm';
 import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
+import { usePresence } from './usePresence';
 import {
   Archive,
   ArchiveRestore,
@@ -104,6 +106,35 @@ export default function App() {
   const editingHabit = habits.find((h) => h.id === editingId) ?? null;
   const calendarHabit = activeHabits.find((h) => h.id === calendarId) ?? null;
   const amountHabit = habits.find((h) => h.id === amountFor?.habitId) ?? null;
+
+  // Windows and banners stay on screen briefly while they play their closing animation.
+  const addP = usePresence(adding ? true : null);
+  const editP = usePresence(editingHabit);
+  const calendarP = usePresence(calendarHabit);
+  const amountP = usePresence(
+    amountHabit && amountFor
+      ? {
+          habit: amountHabit,
+          date: amountFor.date,
+          current: entryMap[amountHabit.id]?.[amountFor.date] ?? 0,
+        }
+      : null
+  );
+  const timerP = usePresence(timerOpen ? true : null);
+  const noticeP = usePresence(notice && !error ? notice : null);
+  const errorP = usePresence(error);
+  const nudgeP = usePresence(nudge);
+
+  // The page behind a window stays still while the window is open.
+  const windowOpen = !!(addP.item || editP.item || calendarP.item || amountP.item || timerP.item);
+  useEffect(() => {
+    if (!windowOpen) return;
+    const before = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = before;
+    };
+  }, [windowOpen]);
 
   function fail(message: string, err: unknown) {
     console.error(err);
@@ -289,7 +320,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/80 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/30">
@@ -377,56 +408,71 @@ export default function App() {
           </button>
         </div>
 
-        {notice && !error && (
-          <div
-            role="status"
-            className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
-          >
-            <span>{notice}</span>
-            <button
-              onClick={() => setNotice(null)}
-              className="text-xs font-medium text-green-200 underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-          >
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-xs font-medium text-red-200 underline">
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        {nudge && (
-          <div
-            role="status"
-            className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-          >
-            <p>
-              {nudge.kind === 'stale'
-                ? `Your last backup was ${nudge.days} days ago. Save a new one so you don't lose recent progress.`
-                : "Your data is saved only on this phone. Save a backup so you don't lose it."}
-            </p>
-            <div className="mt-2 flex gap-4">
-              <button onClick={saveBackup} className="text-xs font-semibold text-amber-100 underline">
-                Save backup
-              </button>
-              <button
-                onClick={() => {
-                  dismissNudge();
-                  setNudge(null);
-                }}
-                className="text-xs font-medium text-amber-300/80 underline"
+        {noticeP.item && (
+          <div className={`collapse${noticeP.closing ? ' closing' : ''}`}>
+            <div>
+              <div
+                role="status"
+                className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
               >
-                Later
-              </button>
+                <span>{noticeP.item}</span>
+                <button
+                  onClick={() => setNotice(null)}
+                  className="text-xs font-medium text-green-200 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {errorP.item && (
+          <div className={`collapse${errorP.closing ? ' closing' : ''}`}>
+            <div>
+              <div
+                role="alert"
+                className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              >
+                <span>{errorP.item}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-xs font-medium text-red-200 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {nudgeP.item && (
+          <div className={`collapse${nudgeP.closing ? ' closing' : ''}`}>
+            <div>
+              <div
+                role="status"
+                className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+              >
+                <p>
+                  {nudgeP.item.kind === 'stale'
+                    ? `Your last backup was ${nudgeP.item.days} days ago. Save a new one so you don't lose recent progress.`
+                    : "Your data is saved only on this phone. Save a backup so you don't lose it."}
+                </p>
+                <div className="mt-2 flex gap-4">
+                  <button onClick={saveBackup} className="text-xs font-semibold text-amber-100 underline">
+                    Save backup
+                  </button>
+                  <button
+                    onClick={() => {
+                      dismissNudge();
+                      setNudge(null);
+                    }}
+                    className="text-xs font-medium text-amber-300/80 underline"
+                  >
+                    Later
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -457,18 +503,23 @@ export default function App() {
               Tap a day to mark it done · hold a day, or tap today&apos;s total, to enter an amount
             </p>
             <div className="space-y-3">
-              {activeHabits.map((habit) => (
-                <HabitRow
+              {activeHabits.map((habit, i) => (
+                <div
                   key={habit.id}
-                  habit={habit}
-                  weekDays={weekDays}
-                  valueOn={valueOnFor(habit.id)}
-                  streak={streaks[habit.id] ?? { current: 0, best: 0 }}
-                  onToggle={(date) => toggleComplete(habit, date)}
-                  onAmount={(date) => openAmount(habit, date)}
-                  onEdit={() => setEditingId(habit.id)}
-                  onCalendar={() => setCalendarId(habit.id)}
-                />
+                  className="rise-anim"
+                  style={{ '--d': `${Math.min(i, 6) * 45}ms` } as CSSProperties}
+                >
+                  <HabitRow
+                    habit={habit}
+                    weekDays={weekDays}
+                    valueOn={valueOnFor(habit.id)}
+                    streak={streaks[habit.id] ?? { current: 0, best: 0 }}
+                    onToggle={(date) => toggleComplete(habit, date)}
+                    onAmount={(date) => openAmount(habit, date)}
+                    onEdit={() => setEditingId(habit.id)}
+                    onCalendar={() => setCalendarId(habit.id)}
+                  />
+                </div>
               ))}
             </div>
           </>
@@ -492,7 +543,8 @@ export default function App() {
                 }`}
               />
             </button>
-            {showArchived && (
+            <div className={`collapsible${showArchived ? ' open' : ''}`}>
+              <div>
               <ul className="mt-2 space-y-2">
                 {archivedHabits.map((habit) => {
                   const Icon = getHabitIcon(habit.icon);
@@ -529,46 +581,62 @@ export default function App() {
                   );
                 })}
               </ul>
-            )}
+              </div>
+            </div>
           </section>
         )}
       </main>
 
-      {adding && <HabitForm onSave={addHabit} onClose={() => setAdding(false)} />}
-
-      {editingHabit && (
+      {addP.item && (
         <HabitForm
-          habit={editingHabit}
-          onSave={(data) => saveEdit(editingHabit, data)}
-          onClose={() => setEditingId(null)}
-          onArchive={() => setArchived(editingHabit, !editingHabit.archived)}
-          onDelete={() => deleteHabit(editingHabit)}
+          key={`add${addP.id}`}
+          closing={addP.closing}
+          onSave={addHabit}
+          onClose={() => setAdding(false)}
         />
       )}
 
-      {calendarHabit && (
+      {editP.item && (
+        <HabitForm
+          key={`edit${editP.id}`}
+          closing={editP.closing}
+          habit={editP.item}
+          onSave={(data) => saveEdit(editP.item!, data)}
+          onClose={() => setEditingId(null)}
+          onArchive={() => setArchived(editP.item!, !editP.item!.archived)}
+          onDelete={() => deleteHabit(editP.item!)}
+        />
+      )}
+
+      {calendarP.item && (
         <HabitCalendar
-          habit={calendarHabit}
-          valueOn={valueOnFor(calendarHabit.id)}
-          streak={streaks[calendarHabit.id] ?? { current: 0, best: 0 }}
-          onToggle={(iso) => toggleComplete(calendarHabit, iso)}
-          onAmount={(iso) => openAmount(calendarHabit, iso)}
+          key={`cal${calendarP.id}`}
+          closing={calendarP.closing}
+          habit={calendarP.item}
+          valueOn={valueOnFor(calendarP.item.id)}
+          streak={streaks[calendarP.item.id] ?? { current: 0, best: 0 }}
+          onToggle={(iso) => toggleComplete(calendarP.item!, iso)}
+          onAmount={(iso) => openAmount(calendarP.item!, iso)}
           onClose={() => setCalendarId(null)}
         />
       )}
 
-      {amountHabit && amountFor && (
+      {amountP.item && (
         <AmountModal
-          habit={amountHabit}
-          date={amountFor.date}
-          current={entryMap[amountHabit.id]?.[amountFor.date] ?? 0}
+          key={`amt${amountP.id}`}
+          closing={amountP.closing}
+          habit={amountP.item.habit}
+          date={amountP.item.date}
+          current={amountP.item.current}
           onSave={saveAmount}
           onClose={() => setAmountFor(null)}
         />
       )}
 
-      {timerOpen && (
+      {timerP.item && (
         <TimerModal
+          key={`timer${timerP.id}`}
+          closing={timerP.closing}
           habits={activeHabits}
           onLogTime={logTime}
           onClose={() => setTimerOpen(false)}

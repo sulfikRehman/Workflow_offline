@@ -7,6 +7,8 @@ import { round2, timeUnitFactor } from '@/lib/stats';
 import { formatMs, nextBreakAfter } from '@/lib/timer';
 import type { Habit } from '@/lib/store';
 import TimerDial from '@/TimerDial';
+import { backdropCls, sheetAnimCls } from './ui';
+import { usePresence } from './usePresence';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
 type Alarm = null | 'break' | 'end';
@@ -45,9 +47,11 @@ type Props = {
   /** Adds minutes to today's total for a habit. Returns false if it could not be saved. */
   onLogTime: (habitId: string, minutes: number) => boolean;
   onClose: () => void;
+  /** True while the window plays its closing animation. */
+  closing?: boolean;
 };
 
-export default function TimerModal({ habits, onLogTime, onClose }: Props) {
+export default function TimerModal({ habits, onLogTime, onClose, closing }: Props) {
   const [initial] = useState(loadSettings);
   const [duration, setDuration] = useState(initial.duration);
   const [breakStr, setBreakStr] = useState(String(initial.breakEvery));
@@ -193,6 +197,11 @@ export default function TimerModal({ habits, onLogTime, onClose }: Props) {
   const loggable = habits.filter((h) => timeUnitFactor(h.unit) !== null);
   const logTarget = loggable.find((h) => h.id === logHabitId) ?? loggable[0];
 
+  // Banners fold open and shut instead of popping in and out.
+  const alarmP = usePresence(alarm);
+  const offerP = usePresence(phase === 'idle' && logTarget ? pendingLog : null);
+  const loggedP = usePresence(phase === 'idle' ? loggedMsg : null);
+
   function logTimeNow() {
     if (pendingLog === null || !logTarget) return;
     if (onLogTime(logTarget.id, pendingLog)) {
@@ -234,12 +243,12 @@ export default function TimerModal({ habits, onLogTime, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className={backdropCls(closing)}
       onClick={requestClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -276,8 +285,8 @@ export default function TimerModal({ habits, onLogTime, onClose }: Props) {
             <p className="mt-1 text-xs text-neutral-500">{caption}</p>
           </TimerDial>
 
-          {phase === 'idle' && (
-            <>
+          <div className={`collapsible${phase === 'idle' ? ' open' : ''}`}>
+            <div>
               <div className="mt-3 flex gap-2">
                 <button type="button" onClick={() => adjust(-5)} className={chipCls}>
                   −5
@@ -296,68 +305,83 @@ export default function TimerModal({ habits, onLogTime, onClose }: Props) {
                 One turn of the dial = 60 minutes (up to 12 hours).
                 {breakActive && ' Amber dots mark break reminders.'}
               </p>
-            </>
-          )}
+            </div>
+          </div>
         </div>
 
-        {alarm && (
-          <div
-            role="alert"
-            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
-          >
-            <div className="flex items-center gap-2 text-sm font-medium text-green-300">
-              <BellRing className="h-5 w-5" />
-              {alarm === 'end' ? "Time's up!" : 'Time for a break!'}
+        {alarmP.item && (
+          <div className={`collapse${alarmP.closing ? ' closing' : ''}`}>
+            <div>
+              <div
+                role="alert"
+                className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
+              >
+                <div className="flex items-center gap-2 text-sm font-medium text-green-300">
+                  <BellRing className="h-5 w-5" />
+                  {alarmP.item === 'end' ? "Time's up!" : 'Time for a break!'}
+                </div>
+                <button
+                  onClick={() => (alarmP.item === 'end' ? reset() : setAlarm(null))}
+                  className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950 active:scale-95"
+                >
+                  {alarmP.item === 'end' ? 'Stop' : 'Dismiss'}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => (alarm === 'end' ? reset() : setAlarm(null))}
-              className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950 active:scale-95"
-            >
-              {alarm === 'end' ? 'Stop' : 'Dismiss'}
-            </button>
           </div>
         )}
 
-        {phase === 'idle' && pendingLog !== null && logTarget && (
-          <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-            <p className="text-sm font-medium text-white">
-              Add {round2(pendingLog)} min to a habit?
-            </p>
-            <div className="mt-2 flex gap-2">
-              <select
-                value={logTarget.id}
-                onChange={(e) => setLogHabitId(e.target.value)}
-                aria-label="Habit to add the time to"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
-              >
-                {loggable.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name} ({h.unit})
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={logTimeNow}
-                className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => setPendingLog(null)}
-                className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
-              >
-                No
-              </button>
+        {offerP.item !== null && logTarget && (
+          <div className={`collapse${offerP.closing ? ' closing' : ''}`}>
+            <div>
+              <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
+                <p className="text-sm font-medium text-white">
+                  Add {round2(offerP.item)} min to a habit?
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <select
+                    value={logTarget.id}
+                    onChange={(e) => setLogHabitId(e.target.value)}
+                    aria-label="Habit to add the time to"
+                    className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                  >
+                    {loggable.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} ({h.unit})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={logTimeNow}
+                    className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => setPendingLog(null)}
+                    className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
+                  >
+                    No
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] text-neutral-500">
+                  Only habits measured in minutes or hours are listed. The time is added to today.
+                </p>
+              </div>
             </div>
-            <p className="mt-1.5 text-[11px] text-neutral-500">
-              Only habits measured in minutes or hours are listed. The time is added to today.
-            </p>
           </div>
         )}
-        {phase === 'idle' && loggedMsg && (
-          <p role="status" className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">
-            {loggedMsg}
-          </p>
+        {loggedP.item && (
+          <div className={`collapse${loggedP.closing ? ' closing' : ''}`}>
+            <div>
+              <p
+                role="status"
+                className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
+              >
+                {loggedP.item}
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="mt-5">

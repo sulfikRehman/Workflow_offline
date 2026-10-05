@@ -34,6 +34,10 @@ Break reminders are adjustable: tick the box and set how many minutes apart they
 - **Backup reminder**: a banner appears if you have never saved a backup (after 3 days of use) or the last one is over 7 days old. "Later" hides it for 2 days.
 - **Timer**: when a timer ends, tap Stop and you can add its minutes to a habit measured in minutes or hours. The time is added to today's total.
 
+## Motion
+Pop-up windows slide up from the bottom (and float in on a wide screen), then slide away when closed. The drop-down menu pops from its corner. Banners (backup reminder, notices, timer alarms) fold open and shut. The Archived list and the timer's quick-adjust row glide open and closed. Habit cards rise in one after another when the app opens, a ticked day pops its check mark, and the running timer's ring and dot glide instead of stepping. The page behind a window stays still while it is open.
+If your phone's "remove animations" / reduce-motion setting is on, none of this animates. The timings and shapes are in `src/index.css`; windows share `src/ui.ts` and `src/usePresence.ts`.
+
 ## Menu (top right)
 The menu button at the top right opens a dropdown with:
 - **Save backup**: downloads all your habits and history as a file.

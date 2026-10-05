@@ -13,6 +13,7 @@ import {
 import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
 import { useEscape } from './useEscape';
+import { backdropCls, sheetAnimCls } from './ui';
 
 type Props = {
   habit: Habit;
@@ -22,6 +23,8 @@ type Props = {
   onToggle: (iso: string) => void;
   onAmount: (iso: string) => void;
   onClose: () => void;
+  /** True while the window plays its closing animation. */
+  closing?: boolean;
 };
 
 const HEAD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -33,6 +36,7 @@ export default function HabitCalendar({
   onToggle,
   onAmount,
   onClose,
+  closing,
 }: Props) {
   const now = new Date();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -60,12 +64,12 @@ export default function HabitCalendar({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className={backdropCls(closing)}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl"
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -143,7 +147,7 @@ export default function HabitCalendar({
           ))}
         </div>
 
-        <div className="mt-1.5 space-y-1.5" role="grid" aria-label={title}>
+        <div key={`${view.y}-${view.m}`} className="fade-anim mt-1.5 space-y-1.5" role="grid" aria-label={title}>
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7 gap-1.5">
               {week.map((d, di) => {
@@ -176,7 +180,7 @@ export default function HabitCalendar({
                     }`}
                   >
                     <span
-                      className="flex h-full w-full items-center justify-center rounded-lg"
+                      className="flex h-full w-full items-center justify-center rounded-lg transition-colors duration-200"
                       style={{
                         backgroundColor: done
                           ? habit.color

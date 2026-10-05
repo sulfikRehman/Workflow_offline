@@ -88,7 +88,7 @@ export default function HabitRow({
       </div>
 
       {/* Week grid */}
-      <div className="mt-4 grid grid-cols-7 gap-1.5">
+      <div key={toISODate(weekDays[0])} className="fade-anim mt-4 grid grid-cols-7 gap-1.5">
         {weekDays.map((d, i) => {
           const iso = toISODate(d);
           const val = weekVals[i];
@@ -115,14 +115,14 @@ export default function HabitRow({
                 {dayLabel(d)}
               </span>
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] ${
+                className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] transition-colors duration-200 ${
                   done ? 'text-neutral-950' : partial ? 'text-white' : 'text-neutral-600'
                 }`}
                 style={{
                   backgroundColor: done ? habit.color : partial ? `${habit.color}33` : 'transparent',
                 }}
               >
-                {done ? <Check className="h-3.5 w-3.5" /> : partial ? Math.round(val) : ''}
+                {done ? <Check className="check-anim h-3.5 w-3.5" /> : partial ? Math.round(val) : ''}
               </span>
               <span className="text-[9px] text-neutral-600">{d.getDate()}</span>
             </LongPressButton>

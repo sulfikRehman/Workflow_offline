@@ -1,3 +1,175 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---------- Feel: no grey tap flash, no pull-to-refresh by accident ---------- */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  overscroll-behavior-y: contain;
+}
+button,
+[role='button'],
+summary,
+select {
+  touch-action: manipulation;
+}
+/* Buttons that have no transition of their own still ease between states. */
+button {
+  transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------- Motion ---------- */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(48px); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(6px) scale(0.97); }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes check-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes collapse-in {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to { grid-template-rows: 1fr; opacity: 1; }
+}
+@keyframes collapse-out {
+  from { grid-template-rows: 1fr; opacity: 1; }
+  to { grid-template-rows: 0fr; opacity: 0; }
+}
+
+/* Dim background behind a pop-up */
+.backdrop-anim {
+  animation: fade-in 200ms ease-out both;
+}
+.backdrop-anim.closing {
+  animation: fade-out 200ms ease-in both;
+  pointer-events: none;
+}
+
+/* Pop-up panel: slides up from the bottom on a phone, floats in on a wide screen */
+.sheet-anim {
+  animation: sheet-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.sheet-anim.closing {
+  animation: sheet-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+@media (min-width: 640px) {
+  .sheet-anim {
+    animation-name: pop-in;
+    animation-duration: 240ms;
+  }
+  .sheet-anim.closing {
+    animation-name: pop-out;
+    animation-duration: 160ms;
+  }
+}
+
+/* Drop-down menu */
+.menu-anim {
+  transform-origin: top right;
+  animation: menu-in 170ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.menu-anim.closing {
+  animation: menu-out 120ms ease-in both;
+  pointer-events: none;
+}
+
+/* Cards that appear one after another */
+.rise-anim {
+  animation: rise-in 350ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.fade-anim {
+  animation: fade-in 220ms ease-out both;
+}
+.check-anim {
+  animation: check-pop 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Something that grows open when it appears and folds shut when it goes (banners, offers) */
+.collapse {
+  display: grid;
+  animation: collapse-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.collapse.closing {
+  animation: collapse-out 200ms ease-in both;
+  pointer-events: none;
+}
+.collapse > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* A section that is always there but opens and closes (Archived, timer shortcuts) */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms ease,
+    visibility 0s linear 260ms;
+}
+.collapsible.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms ease,
+    visibility 0s;
+}
+.collapsible > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* People who turn animations off in their phone settings get none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}
