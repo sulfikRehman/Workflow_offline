@@ -56,8 +56,15 @@ Data format: `skips` (list of {habit_id, date}) is a new optional field; backups
 Data format: old data and old backups keep working. `notes` (list) and a habit's `goal` are optional fields; backups now contain `notes`.
 
 ## Motion
-Pop-up windows slide up from the bottom (and float in on a wide screen), then slide away when closed. The drop-down menu pops from its corner. Banners (backup reminder, notices, timer alarms) fold open and shut. The Archived list and the timer's quick-adjust row glide open and closed. Habit cards rise in one after another when the app opens, a ticked day pops its check mark, and the running timer's ring and dot glide instead of stepping. The page behind a window stays still while it is open.
-If your phone's "remove animations" / reduce-motion setting is on, none of this animates. The timings and shapes are in `src/index.css`; windows share `src/ui.ts` and `src/usePresence.ts`.
+
+One motion system lives in `src/index.css`: shared curves and times (`--ease-out`, `--ease-exit`, `--t-micro` 150ms, `--t-small` 190ms, `--t-modal-in` 280ms, `--t-modal-out` 200ms, `--t-view` 300ms) and a small set of classes.
+
+- Windows: the dim backdrop fades on its own; the panel slides up with a slight scale on a phone and scales in on a wide screen. Both finish their exit animation before they leave the page (`usePresence`).
+- Menu: small drop and scale from its corner. Banners and the Archived / timer rows fold open and shut.
+- Week and month changes slide in from the side you moved towards; new habit cards rise in one after another (first 6 only).
+- Every button shrinks to 97% while pressed (`button:active` in the CSS; add `no-press` to opt out). Keyboard focus shows a green ring.
+- Progress bars move with `transform`, not `width`. The collapse animations use grid row height; they are small and rare.
+- "Reduce motion" (phone setting): no movement at all. Windows and cards just fade in over 120ms, and things that leave disappear at once.
 
 ## Menu (top right)
 The menu button at the top right opens a dropdown with:

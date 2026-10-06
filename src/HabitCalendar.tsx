@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { ChevronLeft, ChevronRight, Flame, X } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { toISODate, todayISO } from '@/lib/date';
@@ -47,6 +48,7 @@ export default function HabitCalendar({
 }: Props) {
   const now = new Date();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [dir, setDir] = useState(0); // which way the month just changed
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
 
@@ -64,6 +66,7 @@ export default function HabitCalendar({
   });
 
   function go(delta: number) {
+    setDir(delta);
     setView((v) => {
       const d = new Date(v.y, v.m + delta, 1);
       return { y: d.getFullYear(), m: d.getMonth() };
@@ -158,7 +161,13 @@ export default function HabitCalendar({
           ))}
         </div>
 
-        <div key={`${view.y}-${view.m}`} className="fade-anim mt-1.5 space-y-1.5" role="grid" aria-label={title}>
+        <div
+          key={`${view.y}-${view.m}`}
+          className="slide-anim mt-1.5 space-y-1.5"
+          style={{ '--dx': `${dir * 16}px` } as CSSProperties}
+          role="grid"
+          aria-label={title}
+        >
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7 gap-1.5">
               {week.map((d, di) => {
@@ -181,7 +190,7 @@ export default function HabitCalendar({
                     aria-label={`${iso}, ${done ? 'done' : partial ? 'partly done' : 'not done'}${
                       notes[iso] ? ', has a note' : ''
                     }${rest ? ', rest day' : ''}`}
-                    className={`flex aspect-square items-center justify-center rounded-lg border text-xs font-medium tabular-nums transition active:scale-95 disabled:cursor-default disabled:opacity-25 ${
+                    className={`flex aspect-square items-center justify-center rounded-lg border text-xs font-medium tabular-nums transition disabled:cursor-default disabled:opacity-25 ${
                       done ? 'border-transparent text-neutral-950' : 'text-neutral-300'
                     } ${
                       done || partial

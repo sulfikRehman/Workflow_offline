@@ -265,21 +265,21 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
         {phase === 'running' ? (
           <button
             onClick={pause}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950"
           >
             <Pause className="h-4 w-4" /> Pause
           </button>
         ) : phase === 'paused' ? (
           <button
             onClick={resume}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950"
           >
             <Play className="h-4 w-4" /> Resume
           </button>
         ) : (
           <button
             onClick={start}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950"
           >
             <Play className="h-4 w-4" /> Start
           </button>
@@ -287,7 +287,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
         <button
           onClick={stop}
           disabled={idle}
-          className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40"
+          className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white disabled:opacity-40"
         >
           <RotateCcw className="h-4 w-4" /> Reset
         </button>

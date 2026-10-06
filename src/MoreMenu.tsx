@@ -28,7 +28,7 @@ const LEVEL_LABEL: Record<HapticLevel, string> = {
 };
 
 const itemCls =
-  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-200 transition hover:bg-neutral-800 active:bg-neutral-800 disabled:opacity-40 disabled:hover:bg-transparent';
+  'no-press flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-200 transition hover:bg-neutral-800 active:bg-neutral-800 disabled:opacity-40 disabled:hover:bg-transparent';
 
 export default function MoreMenu({
   onSaveBackup,
@@ -86,7 +86,7 @@ export default function MoreMenu({
         aria-expanded={open}
         aria-haspopup="true"
         aria-label={open ? 'Close menu' : 'Open menu'}
-        className={`inline-flex items-center rounded-lg border px-2.5 py-2 text-sm font-medium transition active:scale-95 ${
+        className={`inline-flex items-center rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
           open
             ? 'border-neutral-600 bg-neutral-800 text-white'
             : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'

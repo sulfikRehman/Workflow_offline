@@ -63,7 +63,7 @@ export default function AmountModal({
   }
 
   const chipCls =
-    'flex-1 rounded-lg border border-neutral-800 py-2 text-xs font-medium text-neutral-300 hover:text-white active:scale-95';
+    'flex-1 rounded-lg border border-neutral-800 py-2 text-xs font-medium text-neutral-300 hover:text-white';
 
   return (
     <div

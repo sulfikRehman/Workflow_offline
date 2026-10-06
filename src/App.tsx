@@ -72,6 +72,7 @@ export default function App() {
   const [notes, setNotes] = useState<HabitNote[]>(() => store.getNotes());
   const [skips, setSkips] = useState<HabitSkip[]>(() => store.getSkips());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
+  const [weekDir, setWeekDir] = useState(0);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [calendarId, setCalendarId] = useState<string | null>(null);
@@ -494,7 +495,7 @@ export default function App() {
             />
             <button
               onClick={() => setTimerOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95 sm:px-3"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white sm:px-3"
               aria-label="Open timer"
             >
               <Timer className="h-4 w-4" />
@@ -502,7 +503,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setAdding(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400 active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Habit</span>
@@ -541,7 +542,10 @@ export default function App() {
         {/* Week selector */}
         <div className="mb-4 flex items-center justify-between">
           <button
-            onClick={() => setWeekRef((r) => shiftWeek(r, -1))}
+            onClick={() => {
+              setWeekDir(-1);
+              setWeekRef((r) => shiftWeek(r, -1));
+            }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
             aria-label="Previous week"
           >
@@ -556,7 +560,10 @@ export default function App() {
             </p>
           </div>
           <button
-            onClick={() => setWeekRef((r) => shiftWeek(r, 1))}
+            onClick={() => {
+              setWeekDir(1);
+              setWeekRef((r) => shiftWeek(r, 1));
+            }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
             aria-label="Next week"
           >
@@ -637,7 +644,7 @@ export default function App() {
         <div className="mb-3 flex items-center justify-between gap-2">
           <button
             onClick={() => setTrendsOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
           >
             <TrendingUp className="h-4 w-4" /> Trends
           </button>
@@ -645,7 +652,7 @@ export default function App() {
             <button
               onClick={() => setReordering((r) => !r)}
               aria-pressed={reordering}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition active:scale-95 ${
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
                 reordering
                   ? 'border-green-500 bg-green-500/15 text-green-400'
                   : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'
@@ -701,6 +708,7 @@ export default function App() {
                     onCalendar={() => setCalendarId(habit.id)}
                     hasNote={(iso) => !!noteMap[habit.id]?.[iso]}
                     isSkipped={skippedFor(habit.id)}
+                    slide={weekDir}
                     reorder={
                       reordering && activeHabits.length >= 2
                         ? {
@@ -758,7 +766,7 @@ export default function App() {
                       <span className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => setArchived(habit, false)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:text-white active:scale-95"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:text-white"
                         >
                           <ArchiveRestore className="h-3.5 w-3.5" /> Restore
                         </button>

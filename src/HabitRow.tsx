@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -38,6 +39,8 @@ type Props = {
   hasNote: (iso: string) => boolean;
   /** Is this date marked as a rest day? */
   isSkipped: (iso: string) => boolean;
+  /** Which way the week just changed: -1 earlier, 1 later, 0 not at all (sets the slide direction). */
+  slide: number;
   /** Present while the list is being reordered. */
   reorder?: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void };
 };
@@ -54,6 +57,7 @@ export default function HabitRow({
   onCalendar,
   hasNote,
   isSkipped,
+  slide,
   reorder,
 }: Props) {
   const Icon = getHabitIcon(habit.icon);
@@ -68,7 +72,7 @@ export default function HabitRow({
   const schedule = scheduleLabel(habit.days);
   const goal = goalProgress(habit, allValues);
   const iconBtn =
-    'flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white active:scale-95';
+    'flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white';
 
   return (
     <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70">
@@ -81,7 +85,7 @@ export default function HabitRow({
                 onClick={reorder.onUp}
                 disabled={!reorder.canUp}
                 aria-label={`Move ${habit.name} up`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white disabled:opacity-30"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>
@@ -89,7 +93,7 @@ export default function HabitRow({
                 onClick={reorder.onDown}
                 disabled={!reorder.canDown}
                 aria-label={`Move ${habit.name} down`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white disabled:opacity-30"
               >
                 <ArrowDown className="h-4 w-4" />
               </button>
@@ -112,7 +116,7 @@ export default function HabitRow({
         <button
           onClick={() => onAmount(todayISO())}
           aria-label={`Enter today's amount for ${habit.name}`}
-          className="shrink-0 rounded-lg px-2 py-1 text-right transition hover:bg-neutral-800 active:scale-95"
+          className="shrink-0 rounded-lg px-2 py-1 text-right transition hover:bg-neutral-800"
         >
           <p className="text-sm font-semibold tabular-nums text-green-400">
             {round2(todayVal)}
@@ -126,8 +130,8 @@ export default function HabitRow({
       <div className="mt-3">
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
           <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${todayPct}%`, backgroundColor: habit.color }}
+            className="fill h-full rounded-full"
+            style={{ transform: `translateX(${todayPct - 100}%)`, backgroundColor: habit.color }}
           />
         </div>
       </div>
@@ -148,15 +152,19 @@ export default function HabitRow({
           </div>
           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
             <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${goal.pct}%`, backgroundColor: habit.color }}
+              className="fill h-full rounded-full"
+              style={{ transform: `translateX(${goal.pct - 100}%)`, backgroundColor: habit.color }}
             />
           </div>
         </div>
       )}
 
       {/* Week grid */}
-      <div key={toISODate(weekDays[0])} className="fade-anim mt-4 grid grid-cols-7 gap-1.5">
+      <div
+        key={toISODate(weekDays[0])}
+        className="slide-anim mt-4 grid grid-cols-7 gap-1.5"
+        style={{ '--dx': `${slide * 16}px` } as CSSProperties}
+      >
         {weekDays.map((d, i) => {
           const iso = toISODate(d);
           const val = weekVals[i];
@@ -170,7 +178,7 @@ export default function HabitRow({
               key={iso}
               onTap={() => onToggle(iso)}
               onLong={() => onAmount(iso)}
-              className={`flex flex-col items-center gap-1 rounded-lg border py-2 transition active:scale-95 ${
+              className={`flex flex-col items-center gap-1 rounded-lg border py-2 transition ${
                 today ? 'border-green-500/40' : 'border-neutral-800/50 hover:border-neutral-700'
               } ${done ? 'bg-green-500/15' : 'bg-neutral-900/30'} ${scheduled && !rest ? '' : 'opacity-50'}`}
               title={`${round2(val)} / ${round2(habit.target_value)} ${habit.unit}${

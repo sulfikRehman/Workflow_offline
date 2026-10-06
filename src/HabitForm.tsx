@@ -150,7 +150,7 @@ export default function HabitForm({
                         setColor(t.color);
                         setError(null);
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white active:scale-95"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white"
                     >
                       <Ico className="h-3.5 w-3.5" style={{ color: t.color }} />
                       {t.name}
@@ -231,7 +231,7 @@ export default function HabitForm({
                     key={d}
                     onClick={() => toggleDay(d)}
                     aria-pressed={on}
-                    className={`rounded-lg border py-2 text-xs font-medium transition active:scale-95 ${
+                    className={`rounded-lg border py-2 text-xs font-medium transition ${
                       on
                         ? 'border-green-500 bg-green-500/15 text-green-400'
                         : 'border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-white'
@@ -284,7 +284,7 @@ export default function HabitForm({
                     onClick={() => setColor(c)}
                     aria-pressed={sel}
                     aria-label={`Colour ${c}`}
-                    className={`flex h-9 items-center justify-center rounded-lg border transition active:scale-95 ${
+                    className={`flex h-9 items-center justify-center rounded-lg border transition ${
                       sel ? 'border-white' : 'border-neutral-800 hover:border-neutral-600'
                     }`}
                   >

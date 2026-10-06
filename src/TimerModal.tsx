@@ -247,9 +247,9 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
   const inputCls =
     'w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none disabled:opacity-50';
   const chipCls =
-    'flex-1 rounded-lg border border-neutral-800 py-2 text-sm font-medium text-neutral-300 hover:text-white active:scale-95';
+    'flex-1 rounded-lg border border-neutral-800 py-2 text-sm font-medium text-neutral-300 hover:text-white';
   const stepCls =
-    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40';
+    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 hover:text-white disabled:opacity-40';
 
   const banners = (
     <>
@@ -266,7 +266,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
                   </div>
                   <button
                     onClick={() => (alarmP.item === 'end' ? reset() : setAlarm(null))}
-                    className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950 active:scale-95"
+                    className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-neutral-950"
                   >
                     {alarmP.item === 'end' ? 'Stop' : 'Dismiss'}
                   </button>
@@ -297,13 +297,13 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
                     </select>
                     <button
                       onClick={logTimeNow}
-                      className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950 active:scale-95"
+                      className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-neutral-950"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => setPendingLog(null)}
-                      className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300 active:scale-95"
+                      className="rounded-lg border border-neutral-800 px-3 py-2 text-sm font-medium text-neutral-300"
                     >
                       No
                     </button>
@@ -474,14 +474,14 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             {phase === 'running' ? (
               <button
                 onClick={pause}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950"
               >
                 <Pause className="h-4 w-4" /> Pause
               </button>
             ) : phase === 'paused' ? (
               <button
                 onClick={resume}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950"
               >
                 <Play className="h-4 w-4" /> Resume
               </button>
@@ -489,7 +489,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
               <button
                 onClick={start}
                 disabled={duration < 1 || phase === 'finished'}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 active:scale-95 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-neutral-950 disabled:opacity-50"
               >
                 <Play className="h-4 w-4" /> Start
               </button>
@@ -497,7 +497,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             <button
               onClick={reset}
               disabled={phase === 'idle'}
-              className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white active:scale-95 disabled:opacity-40"
+              className="flex items-center justify-center gap-2 rounded-lg border border-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:text-white disabled:opacity-40"
             >
               <RotateCcw className="h-4 w-4" /> Reset
             </button>

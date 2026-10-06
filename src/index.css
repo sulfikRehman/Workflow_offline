@@ -2,9 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- Motion tokens: one set of curves and times for the whole app ---------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* things arriving: fast start, soft landing */
+  --ease-exit: cubic-bezier(0.4, 0, 0.2, 1); /* things leaving */
+  --t-micro: 150ms; /* buttons, colour changes */
+  --t-small: 190ms; /* menus */
+  --t-modal-in: 280ms;
+  --t-modal-out: 200ms;
+  --t-view: 300ms; /* week / month changes */
+}
+
 /* ---------- Feel: no grey tap flash, no pull-to-refresh by accident ---------- */
 html {
   -webkit-tap-highlight-color: transparent;
+  scrollbar-gutter: stable; /* opening a window never shifts the page sideways */
 }
 body {
   overscroll-behavior-y: contain;
@@ -18,8 +30,21 @@ select {
 /* Buttons that have no transition of their own still ease between states. */
 button {
   transition-property: color, background-color, border-color, opacity, transform, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-duration: var(--t-micro);
+  transition-timing-function: var(--ease-out);
+}
+/* One press feedback for every button: a small, quick shrink (not 95%, which looks unstable). */
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+/* Rows inside menus and wide full-width buttons just dim a little instead of shrinking. */
+.no-press:not(:disabled):active {
+  transform: none;
+}
+/* Keyboard focus is visible and eased in; touch taps do not show it. */
+:where(button, [role='button'], a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid rgb(34 197 94 / 0.7);
+  outline-offset: 2px;
 }
 
 /* ---------- Motion ---------- */
@@ -32,20 +57,25 @@ button {
   to { opacity: 0; }
 }
 @keyframes sheet-in {
-  from { opacity: 0; transform: translateY(48px); }
+  from { opacity: 0; transform: translateY(40px) scale(0.985); }
   to { opacity: 1; transform: none; }
 }
 @keyframes sheet-out {
   from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(48px); }
+  to { opacity: 0; transform: translateY(32px) scale(0.985); }
 }
 @keyframes pop-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
   to { opacity: 1; transform: none; }
 }
 @keyframes pop-out {
   from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 0; transform: translateY(4px) scale(0.97); }
+}
+/* Week and month changes: the new page slides in a little from the side it came from. */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(var(--dx, 0px)); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes menu-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.95); }
@@ -75,60 +105,65 @@ button {
 
 /* Dim background behind a pop-up */
 .backdrop-anim {
-  animation: fade-in 200ms ease-out both;
+  animation: fade-in var(--t-modal-in) var(--ease-out) both;
 }
 .backdrop-anim.closing {
-  animation: fade-out 200ms ease-in both;
+  animation: fade-out var(--t-modal-out) var(--ease-exit) both;
   pointer-events: none;
 }
 
 /* Pop-up panel: slides up from the bottom on a phone, floats in on a wide screen */
 .sheet-anim {
-  animation: sheet-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: 50% 100%;
+  animation: sheet-in var(--t-modal-in) var(--ease-out) both;
 }
 .sheet-anim.closing {
-  animation: sheet-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: sheet-out var(--t-modal-out) var(--ease-exit) both;
 }
 @media (min-width: 640px) {
   .sheet-anim {
+    transform-origin: 50% 50%;
     animation-name: pop-in;
     animation-duration: 240ms;
   }
   .sheet-anim.closing {
     animation-name: pop-out;
-    animation-duration: 160ms;
+    animation-duration: 170ms;
   }
 }
 
 /* Drop-down menu */
 .menu-anim {
   transform-origin: top right;
-  animation: menu-in 170ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: menu-in var(--t-small) var(--ease-out) both;
 }
 .menu-anim.closing {
-  animation: menu-out 120ms ease-in both;
+  animation: menu-out 130ms var(--ease-exit) both;
   pointer-events: none;
 }
 
 /* Cards that appear one after another */
 .rise-anim {
-  animation: rise-in 350ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: rise-in 320ms var(--ease-out) both;
   animation-delay: var(--d, 0ms);
 }
 .fade-anim {
-  animation: fade-in 220ms ease-out both;
+  animation: fade-in 220ms var(--ease-out) both;
+}
+.slide-anim {
+  animation: slide-in var(--t-view) var(--ease-out) both;
 }
 .check-anim {
-  animation: check-pop 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: check-pop 260ms var(--ease-out) both;
 }
 
 /* Something that grows open when it appears and folds shut when it goes (banners, offers) */
 .collapse {
   display: grid;
-  animation: collapse-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: collapse-in 260ms var(--ease-out) both;
 }
 .collapse.closing {
-  animation: collapse-out 200ms ease-in both;
+  animation: collapse-out 200ms var(--ease-exit) both;
   pointer-events: none;
 }
 .collapse > div {
@@ -143,7 +178,7 @@ button {
   opacity: 0;
   visibility: hidden;
   transition:
-    grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    grid-template-rows 260ms var(--ease-out),
     opacity 200ms ease,
     visibility 0s linear 260ms;
 }
@@ -152,7 +187,7 @@ button {
   opacity: 1;
   visibility: visible;
   transition:
-    grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    grid-template-rows 260ms var(--ease-out),
     opacity 200ms ease,
     visibility 0s;
 }
@@ -161,15 +196,33 @@ button {
   overflow: hidden;
 }
 
-/* People who turn animations off in their phone settings get none. */
+/* Progress bars slide their fill with transform (GPU) instead of animating width. */
+.fill {
+  width: 100%;
+  transition: transform 500ms var(--ease-out);
+  will-change: transform;
+}
+
+/* People who turn animations off in their phone settings get no movement at all: windows and
+   cards just fade in quickly, and things that leave disappear at once. */
 @media (prefers-reduced-motion: reduce) {
+  @keyframes sheet-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pop-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes menu-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slide-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes check-pop { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes collapse-in { from { opacity: 0; } to { opacity: 1; } }
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 120ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
+  }
+  button:not(:disabled):active {
+    transform: none;
   }
 }

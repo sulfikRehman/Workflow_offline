@@ -48,8 +48,8 @@ export default function WeeklyCard({ summary, nameOf }: Props) {
       </div>
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
         <div
-          className="h-full rounded-full bg-green-500 transition-all duration-500"
-          style={{ width: `${thisWeek.pct}%` }}
+          className="fill h-full rounded-full bg-green-500"
+          style={{ transform: `translateX(${thisWeek.pct - 100}%)` }}
         />
       </div>
       {(best || needsAttention) && (

@@ -279,8 +279,11 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
                       <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct ?? 0}%`, backgroundColor: habit.color }}
+                        className="fill h-full rounded-full"
+                        style={{
+                          transform: `translateX(${(pct ?? 0) - 100}%)`,
+                          backgroundColor: habit.color,
+                        }}
                       />
                     </div>
                   </li>
