@@ -60,6 +60,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
   const startRef = useRef(0); // when the current run began
   const indexRef = useRef(0); // segment we are in, to notice when a new one begins
   const wakeRef = useRef<WakeLockSentinel | null>(null);
+  const beepTimerRef = useRef(0); // the second beep of a segment change
 
   const draft = toConfig(fields);
   const cfg = phase === 'idle' ? draft : cfgRef.current;
@@ -94,6 +95,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
     wakeRef.current = null;
   }, []);
   useEffect(() => releaseWake, [releaseWake]);
+  useEffect(() => () => window.clearTimeout(beepTimerRef.current), []);
 
   // The clock: elapsed active time comes from real timestamps, never from counting ticks.
   useEffect(() => {
@@ -111,7 +113,8 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
         // A new segment began: two beeps and a buzz (a different pitch for focus and break).
         const freq = w.kind === 'focus' ? 988 : 660;
         beep(freq);
-        window.setTimeout(() => beep(freq), 450);
+        if (beepTimerRef.current) window.clearTimeout(beepTimerRef.current);
+        beepTimerRef.current = window.setTimeout(() => beep(freq), 450);
         haptic(w.kind === 'focus' ? 'endAlarm' : 'breakAlarm');
       }
     };

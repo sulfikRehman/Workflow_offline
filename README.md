@@ -84,3 +84,9 @@ The phone vibrates lightly on every button tap, once per minute as you turn the 
 - Use the Backup button (floppy icon) to save a .json file, and Restore (upload icon) to load
   it on any device. Do this regularly.
 - Data is NOT shared between devices (phone and laptop have separate data).
+
+## Reliability notes
+
+- Saved data is read defensively: blocked or unreadable storage, or corrupt JSON, no longer stops the app from opening (a copy of unreadable data is kept under `habitflow:v1:corrupt-…`).
+- If a screen ever throws while drawing, a small "Something went wrong — Reload" screen appears instead of a blank page. Data is not touched.
+- Both timers compute time from real timestamps (not tick counts), so throttling or a locked phone does not make them drift.

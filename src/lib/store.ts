@@ -195,7 +195,12 @@ function write(db: DB): void {
 
 function load(): DB {
   if (cache) return cache;
-  const raw = localStorage.getItem(KEY);
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(KEY);
+  } catch {
+    /* storage blocked: start with sample data for this session */
+  }
   if (!raw) {
     const db = seed();
     try {
