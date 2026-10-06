@@ -16,7 +16,9 @@ type Props = {
   current: number;
   /** The note saved for that day ('' if none). */
   note: string;
-  onSave: (value: number, note: string) => void;
+  /** Is this day marked as a rest day? */
+  rest: boolean;
+  onSave: (value: number, note: string, rest: boolean) => void;
   onClose: () => void;
   /** True while the window plays its closing animation. */
   closing?: boolean;
@@ -38,12 +40,14 @@ export default function AmountModal({
   date,
   current,
   note: savedNote,
+  rest: savedRest,
   onSave,
   onClose,
   closing,
 }: Props) {
   const [text, setText] = useState(current > 0 ? String(round2(current)) : '');
   const [note, setNote] = useState(savedNote);
+  const [rest, setRest] = useState(savedRest);
   const [error, setError] = useState<string | null>(null);
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
@@ -55,7 +59,7 @@ export default function AmountModal({
       setError(`Enter a number from 0 to ${MAX}.`);
       return;
     }
-    onSave(round2(value), note.trim());
+    onSave(round2(value), note.trim(), rest);
   }
 
   const chipCls =
@@ -69,7 +73,7 @@ export default function AmountModal({
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} w-full max-w-md rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-center gap-3">
           <div
@@ -143,6 +147,22 @@ export default function AmountModal({
         <p className="mt-1 text-right text-[11px] tabular-nums text-neutral-600">
           {note.length}/{NOTE_MAX}
         </p>
+
+        <label className="mt-3 flex items-start gap-2.5 rounded-lg border border-neutral-800 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={rest}
+            onChange={(e) => setRest(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-green-500"
+          />
+          <span className="text-xs text-neutral-300">
+            Rest day
+            <span className="block text-[11px] text-neutral-500">
+              Doesn&apos;t break your streak and isn&apos;t counted against you. If you reach the
+              target anyway, it counts as done.
+            </span>
+          </span>
+        </label>
 
         <div className="mt-3 flex gap-2">
           <button

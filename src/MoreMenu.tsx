@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Info, Menu, Save, Upload, X } from 'lucide-react';
+import { Download, Info, Menu, Save, Share2, Upload, X } from 'lucide-react';
 import {
   LEVELS,
   getHapticLevel,
@@ -13,6 +13,7 @@ import { usePresence } from './usePresence';
 
 type Props = {
   onSaveBackup: () => void;
+  onShareBackup: () => void;
   onRestoreBackup: () => void;
   onExportCSV: () => void;
   onAbout: () => void;
@@ -31,6 +32,7 @@ const itemCls =
 
 export default function MoreMenu({
   onSaveBackup,
+  onShareBackup,
   onRestoreBackup,
   onExportCSV,
   onAbout,
@@ -109,6 +111,15 @@ export default function MoreMenu({
               Save backup
               <span className="block text-[11px] text-neutral-500">
                 Download everything as a file
+              </span>
+            </span>
+          </button>
+          <button onClick={() => run(onShareBackup)} className={itemCls}>
+            <Share2 className="h-4 w-4 shrink-0 text-neutral-400" />
+            <span>
+              Share backup
+              <span className="block text-[11px] text-neutral-500">
+                Send the file to Drive, WhatsApp or email
               </span>
             </span>
           </button>

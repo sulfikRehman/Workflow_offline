@@ -25,6 +25,8 @@ type Props = {
   onAmount: (iso: string) => void;
   /** Notes for this habit, date (YYYY-MM-DD) -> text. */
   notes: Record<string, string>;
+  /** Is this date marked as a rest day? */
+  isSkipped: (iso: string) => boolean;
   onClose: () => void;
   /** True while the window plays its closing animation. */
   closing?: boolean;
@@ -39,6 +41,7 @@ export default function HabitCalendar({
   onToggle,
   onAmount,
   notes,
+  isSkipped,
   onClose,
   closing,
 }: Props) {
@@ -50,7 +53,7 @@ export default function HabitCalendar({
   const today = todayISO();
   const atCurrentMonth = view.y === now.getFullYear() && view.m === now.getMonth();
   const weeks = monthWeeks(view.y, view.m);
-  const summary = monthSummary(habit, valueOn, view.y, view.m, now);
+  const summary = monthSummary(habit, valueOn, view.y, view.m, now, (iso) => isSkipped(iso));
   const monthPrefix = `${view.y}-${String(view.m + 1).padStart(2, '0')}-`;
   const monthNotes = Object.keys(notes)
     .filter((iso) => iso.startsWith(monthPrefix))
@@ -166,6 +169,7 @@ export default function HabitCalendar({
                 const done = val >= habit.target_value;
                 const partial = val > 0 && !done;
                 const scheduled = isActiveDay(habit, d);
+                const rest = isSkipped(iso) && !done;
                 const isToday = iso === today;
                 return (
                   <LongPressButton
@@ -176,13 +180,13 @@ export default function HabitCalendar({
                     title={`${iso}: ${round2(val)} / ${round2(habit.target_value)} ${habit.unit}`}
                     aria-label={`${iso}, ${done ? 'done' : partial ? 'partly done' : 'not done'}${
                       notes[iso] ? ', has a note' : ''
-                    }`}
+                    }${rest ? ', rest day' : ''}`}
                     className={`flex aspect-square items-center justify-center rounded-lg border text-xs font-medium tabular-nums transition active:scale-95 disabled:cursor-default disabled:opacity-25 ${
                       done ? 'border-transparent text-neutral-950' : 'text-neutral-300'
                     } ${
                       done || partial
                         ? ''
-                        : scheduled
+                        : scheduled && !rest
                           ? 'border-neutral-800'
                           : 'border-dashed border-neutral-800 opacity-50'
                     } ${partial ? 'border-transparent' : ''} ${
@@ -204,6 +208,12 @@ export default function HabitCalendar({
                         <span
                           aria-hidden="true"
                           className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
+                        />
+                      )}
+                      {rest && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-1 top-1 h-1.5 w-1.5 rounded-full bg-sky-400"
                         />
                       )}
                     </span>
@@ -241,7 +251,7 @@ export default function HabitCalendar({
         )}
 
         <p className="mt-3 text-center text-[11px] text-neutral-500">
-          Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = has a note.
+          Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = note, blue dot = rest day.
         </p>
       </div>
     </div>

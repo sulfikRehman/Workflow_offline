@@ -14,6 +14,25 @@ export function isActiveDay(habit: Scheduled, d: Date): boolean {
   return !habit.days || habit.days.includes(d.getDay());
 }
 
+/** Is this date marked as a rest day for the habit? */
+export type SkippedOn = (iso: string) => boolean;
+
+/**
+ * Does this day count for the habit? It must be scheduled, and it must not be a rest day.
+ * A rest day where the target was reached still counts (you did it anyway).
+ */
+export function isCountedDay(
+  habit: Goal,
+  d: Date,
+  valueOn?: ValueOn,
+  skipped?: SkippedOn
+): boolean {
+  if (!isActiveDay(habit, d)) return false;
+  if (!skipped || !valueOn) return true;
+  const iso = toISODate(d);
+  return !(skipped(iso) && valueOn(iso) < habit.target_value);
+}
+
 /** How many of these dates fall on a scheduled day. */
 export function activeDaysIn(habit: Scheduled, dates: Date[]): number {
   return dates.filter((d) => isActiveDay(habit, d)).length;
@@ -25,14 +44,19 @@ export function activeDaysIn(habit: Scheduled, dates: Date[]): number {
  * Today does not break the streak while it is still unfinished: the count starts from the last
  * scheduled day before today in that case.
  */
-export function currentStreak(habit: Goal, valueOn: ValueOn, today: Date = new Date()): number {
+export function currentStreak(
+  habit: Goal,
+  valueOn: ValueOn,
+  today: Date = new Date(),
+  skipped?: SkippedOn
+): number {
   const d = new Date(today);
-  if (isActiveDay(habit, d) && valueOn(toISODate(d)) < habit.target_value) {
+  if (isCountedDay(habit, d, valueOn, skipped) && valueOn(toISODate(d)) < habit.target_value) {
     d.setDate(d.getDate() - 1);
   }
   let streak = 0;
   for (let i = 0; i < 3650; i++) {
-    if (isActiveDay(habit, d)) {
+    if (isCountedDay(habit, d, valueOn, skipped)) {
       if (valueOn(toISODate(d)) >= habit.target_value) streak++;
       else break;
     }
@@ -49,7 +73,8 @@ export function bestStreak(
   habit: Goal,
   valueOn: ValueOn,
   from: Date,
-  today: Date = new Date()
+  today: Date = new Date(),
+  skipped?: SkippedOn
 ): number {
   const end = toISODate(today);
   const d = new Date(from);
@@ -58,7 +83,7 @@ export function bestStreak(
   for (let i = 0; i < 20000; i++) {
     const iso = toISODate(d);
     if (iso > end) break;
-    if (isActiveDay(habit, d)) {
+    if (isCountedDay(habit, d, valueOn, skipped)) {
       if (valueOn(iso) >= habit.target_value) {
         run++;
         if (run > best) best = run;
@@ -98,7 +123,8 @@ export function monthSummary(
   valueOn: ValueOn,
   year: number,
   month: number,
-  today: Date = new Date()
+  today: Date = new Date(),
+  skipped?: SkippedOn
 ): { done: number; scheduled: number; pct: number } {
   const end = toISODate(today);
   const count = new Date(year, month + 1, 0).getDate();
@@ -108,7 +134,7 @@ export function monthSummary(
     const d = new Date(year, month, day);
     const iso = toISODate(d);
     if (iso > end) break;
-    if (!isActiveDay(habit, d)) continue;
+    if (!isCountedDay(habit, d, valueOn, skipped)) continue;
     scheduled++;
     if (valueOn(iso) >= habit.target_value) done++;
   }
@@ -200,7 +226,8 @@ export function completionBuckets(
   end: Date,
   size: number,
   count: number,
-  today: Date = new Date()
+  today: Date = new Date(),
+  skipped?: (habitId: string, iso: string) => boolean
 ): Bucket[] {
   const todayIso = toISODate(today);
   const out: Bucket[] = [];
@@ -214,7 +241,9 @@ export function completionBuckets(
       const iso = toISODate(d);
       if (iso <= todayIso) {
         for (const h of habits) {
-          if (iso < h.from || !isActiveDay(h, d)) continue;
+          if (iso < h.from) continue;
+          const sk = skipped ? (x: string) => skipped(h.id, x) : undefined;
+          if (!isCountedDay(h, d, (x) => valueOn(h.id, x), sk)) continue;
           scheduled++;
           if (valueOn(h.id, iso) >= h.target_value) done++;
         }
@@ -239,4 +268,52 @@ export function overallPct(buckets: Bucket[]): number | null {
   const s = buckets.reduce((a, b) => a + b.scheduled, 0);
   const d = buckets.reduce((a, b) => a + b.done, 0);
   return s ? Math.round((d / s) * 100) : null;
+}
+
+export type WeekFigures = { done: number; scheduled: number; pct: number | null };
+
+export type WeeklySummary = {
+  thisWeek: WeekFigures;
+  lastWeek: WeekFigures;
+  /** Percentage points this week vs last week; null if either has nothing scheduled. */
+  delta: number | null;
+  /** Habit with the highest completion this week (must be above 0%), or null. */
+  best: { id: string; pct: number } | null;
+  /** Habit with the lowest completion this week, only if below 100% and not the best one. */
+  needsAttention: { id: string; pct: number } | null;
+};
+
+/**
+ * This week (Monday to today) against the whole of last week, over the given habits.
+ * Rest days and unscheduled days are left out, as everywhere else.
+ */
+export function weeklySummary(
+  habits: ChartHabit[],
+  valueOn: (habitId: string, iso: string) => number,
+  today: Date = new Date(),
+  skipped?: (habitId: string, iso: string) => boolean
+): WeeklySummary {
+  const sunday = new Date(today);
+  sunday.setDate(sunday.getDate() + ((7 - sunday.getDay()) % 7)); // this week's Sunday
+  const [last, now] = completionBuckets(habits, valueOn, sunday, 7, 2, today, skipped);
+  const figures = (b: Bucket): WeekFigures => ({ done: b.done, scheduled: b.scheduled, pct: b.pct });
+  const per = habits
+    .map((h) => {
+      const b = completionBuckets([h], valueOn, sunday, 7, 1, today, skipped)[0];
+      return { id: h.id, pct: b.pct };
+    })
+    .filter((x): x is { id: string; pct: number } => x.pct !== null);
+  let best: { id: string; pct: number } | null = null;
+  for (const x of per) if (!best || x.pct > best.pct) best = x;
+  if (best && best.pct <= 0) best = null;
+  let worst: { id: string; pct: number } | null = null;
+  for (const x of per) if (!worst || x.pct < worst.pct) worst = x;
+  if (worst && (worst.pct >= 100 || worst.id === best?.id)) worst = null;
+  return {
+    thisWeek: figures(now),
+    lastWeek: figures(last),
+    delta: now.pct !== null && last.pct !== null ? now.pct - last.pct : null,
+    best,
+    needsAttention: worst,
+  };
 }

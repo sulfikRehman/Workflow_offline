@@ -34,3 +34,6 @@ const map: Record<string, LucideIcon> = {
 export function getHabitIcon(name: string): LucideIcon {
   return map[name] ?? BookOpen;
 }
+
+/** Every icon a habit can use, in the order they are offered. */
+export const ICON_NAMES = Object.keys(map);

@@ -1,7 +1,17 @@
-import { ArrowDown, ArrowUp, CalendarDays, Check, Flame, Pencil, Trophy, TrendingUp } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
+  Check,
+  Flame,
+  Moon,
+  Pencil,
+  Trophy,
+  TrendingUp,
+} from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { dayLabel, isToday, toISODate, todayISO } from '@/lib/date';
-import { activeDaysIn, goalProgress, isActiveDay, round2, scheduleLabel } from '@/lib/stats';
+import { goalProgress, isActiveDay, isCountedDay, round2, scheduleLabel } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
 
@@ -26,6 +36,8 @@ type Props = {
   onCalendar: () => void;
   /** Does this date have a note? */
   hasNote: (iso: string) => boolean;
+  /** Is this date marked as a rest day? */
+  isSkipped: (iso: string) => boolean;
   /** Present while the list is being reordered. */
   reorder?: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void };
 };
@@ -41,12 +53,15 @@ export default function HabitRow({
   onEdit,
   onCalendar,
   hasNote,
+  isSkipped,
   reorder,
 }: Props) {
   const Icon = getHabitIcon(habit.icon);
   const weekVals = weekDays.map((d) => valueOn(toISODate(d)));
   const weekTotal = weekVals.reduce((a, b) => a + b, 0);
-  const weekTarget = habit.target_value * activeDaysIn(habit, weekDays);
+  const weekTarget =
+    habit.target_value *
+    weekDays.filter((d) => isCountedDay(habit, d, valueOn, (iso) => isSkipped(iso))).length;
   const weekPct = pct(weekTotal, weekTarget);
   const todayVal = valueOn(todayISO());
   const todayPct = pct(todayVal, habit.target_value);
@@ -149,6 +164,7 @@ export default function HabitRow({
           const partial = val > 0 && !done;
           const today = isToday(d);
           const scheduled = isActiveDay(habit, d);
+          const rest = isSkipped(iso) && !done;
           return (
             <LongPressButton
               key={iso}
@@ -156,13 +172,13 @@ export default function HabitRow({
               onLong={() => onAmount(iso)}
               className={`flex flex-col items-center gap-1 rounded-lg border py-2 transition active:scale-95 ${
                 today ? 'border-green-500/40' : 'border-neutral-800/50 hover:border-neutral-700'
-              } ${done ? 'bg-green-500/15' : 'bg-neutral-900/30'} ${scheduled ? '' : 'opacity-50'}`}
+              } ${done ? 'bg-green-500/15' : 'bg-neutral-900/30'} ${scheduled && !rest ? '' : 'opacity-50'}`}
               title={`${round2(val)} / ${round2(habit.target_value)} ${habit.unit}${
                 scheduled ? '' : ' (not scheduled)'
-              }`}
+              }${rest ? ' (rest day)' : ''}`}
               aria-label={`${iso}: ${round2(val)} of ${round2(habit.target_value)} ${habit.unit}${
                 hasNote(iso) ? ', has a note' : ''
-              }`}
+              }${rest ? ', rest day' : ''}`}
             >
               <span
                 className={`text-[10px] font-medium ${today ? 'text-green-400' : 'text-neutral-500'}`}
@@ -177,7 +193,15 @@ export default function HabitRow({
                   backgroundColor: done ? habit.color : partial ? `${habit.color}33` : 'transparent',
                 }}
               >
-                {done ? <Check className="check-anim h-3.5 w-3.5" /> : partial ? Math.round(val) : ''}
+                {done ? (
+                  <Check className="check-anim h-3.5 w-3.5" />
+                ) : partial ? (
+                  Math.round(val)
+                ) : rest ? (
+                  <Moon className="h-3 w-3 text-sky-300" />
+                ) : (
+                  ''
+                )}
               </span>
               <span className="relative text-[9px] text-neutral-600">
                 {d.getDate()}

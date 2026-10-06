@@ -2,7 +2,7 @@ import { Flame, X } from 'lucide-react';
 import { useEscape } from './useEscape';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.2';
+export const APP_VERSION = '1.3';
 
 type Props = {
   habitCount: number;
@@ -15,10 +15,12 @@ type Props = {
 
 const TIPS: [string, string][] = [
   ['Tap a day', 'marks it done (or not done).'],
-  ['Hold a day', 'or tap today’s total, to enter an amount and an optional note.'],
+  ['Hold a day', 'or tap today’s total, to enter an amount, a note, or mark a rest day (keeps your streak).'],
   ['Calendar icon', 'shows a month view, streaks and your notes.'],
+  ['Weekly summary', 'under the stats compares this week with last week.'],
   ['Trends', 'shows how your completion changes over a week, a month or 8 weeks.'],
   ['Reorder', 'lets you move habits up and down.'],
+  ['New Habit', 'offers ready-made templates you can tweak.'],
   ['Timer', 'has a normal countdown and a Pomodoro mode; finished time can be added to a habit.'],
 ];
 
@@ -87,8 +89,9 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
         <p className="text-sm leading-relaxed text-neutral-300">
           Clearing this site&apos;s data in Chrome, or losing the phone, deletes your habits. Use{' '}
           <span className="font-medium text-white">Save backup</span> in the menu now and then and
-          keep the file somewhere safe. <span className="font-medium text-white">Restore backup</span>{' '}
-          puts it back, notes included.
+          keep the file somewhere safe, or <span className="font-medium text-white">Share backup</span>{' '}
+          to send it to Drive or WhatsApp. <span className="font-medium text-white">Restore backup</span>{' '}
+          puts it back, notes and rest days included.
         </p>
         <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
           The timer&apos;s beeps and vibration work while this screen is open. This version does not

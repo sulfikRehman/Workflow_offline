@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as store from '@/lib/store';
-import type { Habit, HabitEntry, HabitNote } from '@/lib/store';
+import type { Habit, HabitEntry, HabitNote, HabitSkip } from '@/lib/store';
 import { getWeekDays, shiftWeek, toISODate, isToday, shortDate, todayISO } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
 import { haptic } from '@/lib/haptics';
 import {
-  activeDaysIn,
   bestStreak,
   currentStreak,
-  isActiveDay,
+  isCountedDay,
   parseISODate,
   round2,
   timeUnitFactor,
+  weeklySummary,
 } from '@/lib/stats';
+import { shareFile } from '@/lib/share';
 import { dismissNudge, getNudge, markBackupSaved } from '@/lib/backupNudge';
 import type { Nudge } from '@/lib/backupNudge';
 import AboutModal from './AboutModal';
@@ -25,6 +26,7 @@ import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import TrendsModal from './TrendsModal';
+import WeeklyCard from './WeeklyCard';
 import { usePresence } from './usePresence';
 import {
   Archive,
@@ -68,6 +70,7 @@ export default function App() {
   const [habits, setHabits] = useState<Habit[]>(() => store.getHabits());
   const [entries, setEntries] = useState<HabitEntry[]>(() => store.getEntries());
   const [notes, setNotes] = useState<HabitNote[]>(() => store.getNotes());
+  const [skips, setSkips] = useState<HabitSkip[]>(() => store.getSkips());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -107,6 +110,18 @@ export default function App() {
     return m;
   }, [notes]);
 
+  // Rest days, keyed habit -> date -> true
+  const skipMap: Record<string, Record<string, true>> = useMemo(() => {
+    const m: Record<string, Record<string, true>> = {};
+    for (const s of skips) {
+      if (!m[s.habit_id]) m[s.habit_id] = {};
+      m[s.habit_id][s.date] = true;
+    }
+    return m;
+  }, [skips]);
+  const skippedFor = (habitId: string) => (iso: string) => !!skipMap[habitId]?.[iso];
+  const skippedOn = (habitId: string, iso: string) => !!skipMap[habitId]?.[iso];
+
   const valueOnFor = (habitId: string) => (iso: string) => entryMap[habitId]?.[iso] ?? 0;
 
   // Current and best streak for each habit (scheduled days only)
@@ -114,14 +129,15 @@ export default function App() {
     const out: Record<string, { current: number; best: number }> = {};
     for (const h of activeHabits) {
       const valueOn = (iso: string) => entryMap[h.id]?.[iso] ?? 0;
+      const skipFn = (iso: string) => !!skipMap[h.id]?.[iso];
       const dates = Object.keys(entryMap[h.id] ?? {}).sort();
       out[h.id] = {
-        current: currentStreak(h, valueOn),
-        best: dates.length ? bestStreak(h, valueOn, parseISODate(dates[0])) : 0,
+        current: currentStreak(h, valueOn, new Date(), skipFn),
+        best: dates.length ? bestStreak(h, valueOn, parseISODate(dates[0]), new Date(), skipFn) : 0,
       };
     }
     return out;
-  }, [activeHabits, entryMap]);
+  }, [activeHabits, entryMap, skipMap]);
 
   // What the Trends window needs: each habit and the first day it counts from.
   const trendHabits = useMemo(
@@ -151,6 +167,7 @@ export default function App() {
           date: amountFor.date,
           current: entryMap[amountHabit.id]?.[amountFor.date] ?? 0,
           note: noteMap[amountHabit.id]?.[amountFor.date] ?? '',
+          rest: !!skipMap[amountHabit.id]?.[amountFor.date],
         }
       : null
   );
@@ -212,7 +229,7 @@ export default function App() {
     setAmountFor({ habitId: habit.id, date });
   }
 
-  function saveAmount(value: number, note: string) {
+  function saveAmount(value: number, note: string, rest: boolean) {
     if (!amountHabit || !amountFor) return;
     const { date } = amountFor;
     const had = entryMap[amountHabit.id]?.[date] ?? 0;
@@ -221,11 +238,16 @@ export default function App() {
     try {
       const saved = store.setNote(amountHabit.id, date, note);
       setNotes((prev) => {
-        const rest = prev.filter((n) => !(n.habit_id === amountHabit.id && n.date === date));
-        return saved ? [...rest, saved] : rest;
+        const others = prev.filter((n) => !(n.habit_id === amountHabit.id && n.date === date));
+        return saved ? [...others, saved] : others;
+      });
+      store.setSkip(amountHabit.id, date, rest);
+      setSkips((prev) => {
+        const others = prev.filter((s) => !(s.habit_id === amountHabit.id && s.date === date));
+        return rest ? [...others, { habit_id: amountHabit.id, date }] : others;
       });
     } catch (err) {
-      fail('Could not save the note. Your phone storage may be full or blocked.', err);
+      fail('Could not save the note or rest day. Your phone storage may be full or blocked.', err);
       return;
     }
     haptic('success');
@@ -261,6 +283,7 @@ export default function App() {
       setHabits((prev) => prev.filter((h) => h.id !== habit.id));
       setEntries((prev) => prev.filter((e) => e.habit_id !== habit.id));
       setNotes((prev) => prev.filter((n) => n.habit_id !== habit.id));
+      setSkips((prev) => prev.filter((s) => s.habit_id !== habit.id));
       if (editingId === habit.id) setEditingId(null);
       if (calendarId === habit.id) setCalendarId(null);
       if (amountFor?.habitId === habit.id) setAmountFor(null);
@@ -313,7 +336,9 @@ export default function App() {
   // Stats (archived habits and days a habit isn't scheduled are left out)
   const todayDate = new Date();
   const todayStr = todayISO();
-  const scheduledToday = activeHabits.filter((h) => isActiveDay(h, todayDate));
+  const scheduledToday = activeHabits.filter((h) =>
+    isCountedDay(h, todayDate, valueOnFor(h.id), skippedFor(h.id))
+  );
   const todayCompleted = scheduledToday.filter(
     (h) => (entryMap[h.id]?.[todayStr] ?? 0) >= h.target_value
   ).length;
@@ -322,30 +347,47 @@ export default function App() {
     (acc, h) =>
       acc +
       weekDays.filter(
-        (d) => isActiveDay(h, d) && (entryMap[h.id]?.[toISODate(d)] ?? 0) >= h.target_value
+        (d) =>
+          isCountedDay(h, d, valueOnFor(h.id), skippedFor(h.id)) &&
+          (entryMap[h.id]?.[toISODate(d)] ?? 0) >= h.target_value
       ).length,
     0
   );
-  const maxWeekChecks = activeHabits.reduce((acc, h) => acc + activeDaysIn(h, weekDays), 0);
+  const maxWeekChecks = activeHabits.reduce(
+    (acc, h) =>
+      acc + weekDays.filter((d) => isCountedDay(h, d, valueOnFor(h.id), skippedFor(h.id))).length,
+    0
+  );
+  const weekly = weeklySummary(trendHabits, (id, iso) => entryMap[id]?.[iso] ?? 0, new Date(), skippedOn);
   const topStreak = activeHabits.reduce((m, h) => Math.max(m, streaks[h.id]?.current ?? 0), 0);
 
   function downloadCSV() {
     if (habits.length === 0) return;
     const habitById = new Map(habits.map((h) => [h.id, h]));
-    const rows: string[] = ['Habit,Date,Value,Unit,Target,Completed,Note'];
-    // One row per day that has an amount or a note.
-    const days = new Map<string, { habit: Habit; date: string; value: number; note: string }>();
+    const rows: string[] = ['Habit,Date,Value,Unit,Target,Completed,Note,Rest day'];
+    // One row per day that has an amount, a note or a rest-day mark.
+    type Day = { habit: Habit; date: string; value: number; note: string; rest: boolean };
+    const days = new Map<string, Day>();
+    const dayFor = (h: Habit, date: string): Day => {
+      const key = `${h.id}|${date}`;
+      let row = days.get(key);
+      if (!row) {
+        row = { habit: h, date, value: 0, note: '', rest: false };
+        days.set(key, row);
+      }
+      return row;
+    };
     for (const e of entries) {
       const h = habitById.get(e.habit_id);
-      if (h) days.set(`${h.id}|${e.date}`, { habit: h, date: e.date, value: e.value, note: '' });
+      if (h) dayFor(h, e.date).value = e.value;
     }
     for (const n of notes) {
       const h = habitById.get(n.habit_id);
-      if (!h) continue;
-      const key = `${h.id}|${n.date}`;
-      const row = days.get(key);
-      if (row) row.note = n.text;
-      else days.set(key, { habit: h, date: n.date, value: 0, note: n.text });
+      if (h) dayFor(h, n.date).note = n.text;
+    }
+    for (const s of skips) {
+      const h = habitById.get(s.habit_id);
+      if (h) dayFor(h, s.date).rest = true;
     }
     const sorted = [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
     for (const r of sorted) {
@@ -358,6 +400,7 @@ export default function App() {
           r.habit.target_value,
           r.value >= r.habit.target_value ? 'Yes' : 'No',
           csvEscape(r.note),
+          r.rest ? 'Yes' : '',
         ].join(',')
       );
     }
@@ -373,6 +416,32 @@ export default function App() {
     haptic('success');
   }
 
+  async function shareBackup() {
+    const name = `habitflow-backup-${todayISO()}.json`;
+    const text = store.exportBackup();
+    const saved = (message: string) => {
+      markBackupSaved();
+      setNudge(null);
+      setError(null);
+      setNotice(message);
+      haptic('success');
+    };
+    try {
+      const result = await shareFile(name, text, 'application/json');
+      if (result === 'shared') {
+        saved('Backup shared. Check that it arrived where you sent it (Drive, WhatsApp, email).');
+      } else if (result === 'unsupported') {
+        download(name, text, 'application/json');
+        saved("This browser can't share files, so the backup was downloaded instead.");
+      }
+      // 'cancelled': you closed the share sheet; nothing to do.
+    } catch (err) {
+      console.error(err);
+      download(name, text, 'application/json');
+      saved('Sharing did not work, so the backup was downloaded instead.');
+    }
+  }
+
   async function restoreBackup(file: File) {
     if (
       !window.confirm(
@@ -385,6 +454,7 @@ export default function App() {
       setHabits(store.getHabits());
       setEntries(store.getEntries());
       setNotes(store.getNotes());
+      setSkips(store.getSkips());
       setEditingId(null);
       setCalendarId(null);
       setAmountFor(null);
@@ -439,6 +509,7 @@ export default function App() {
             </button>
             <MoreMenu
               onSaveBackup={saveBackup}
+              onShareBackup={shareBackup}
               onRestoreBackup={() => fileRef.current?.click()}
               onExportCSV={downloadCSV}
               onAbout={() => setAboutOpen(true)}
@@ -461,6 +532,11 @@ export default function App() {
           <StatCard label="Best Streak" value={`${topStreak}`} sub="days" />
           <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" />
         </section>
+
+        <WeeklyCard
+          summary={weekly}
+          nameOf={(id) => habits.find((h) => h.id === id)?.name ?? ''}
+        />
 
         {/* Week selector */}
         <div className="mb-4 flex items-center justify-between">
@@ -624,6 +700,7 @@ export default function App() {
                     onEdit={() => setEditingId(habit.id)}
                     onCalendar={() => setCalendarId(habit.id)}
                     hasNote={(iso) => !!noteMap[habit.id]?.[iso]}
+                    isSkipped={skippedFor(habit.id)}
                     reorder={
                       reordering && activeHabits.length >= 2
                         ? {
@@ -732,6 +809,7 @@ export default function App() {
           valueOn={valueOnFor(calendarP.item.id)}
           streak={streaks[calendarP.item.id] ?? { current: 0, best: 0 }}
           notes={noteMap[calendarP.item.id] ?? {}}
+          isSkipped={skippedFor(calendarP.item.id)}
           onToggle={(iso) => toggleComplete(calendarP.item!, iso)}
           onAmount={(iso) => openAmount(calendarP.item!, iso)}
           onClose={() => setCalendarId(null)}
@@ -746,6 +824,7 @@ export default function App() {
           date={amountP.item.date}
           current={amountP.item.current}
           note={amountP.item.note}
+          rest={amountP.item.rest}
           onSave={saveAmount}
           onClose={() => setAmountFor(null)}
         />
@@ -757,6 +836,7 @@ export default function App() {
           closing={trendsP.closing}
           habits={trendHabits}
           valueOn={(id, iso) => entryMap[id]?.[iso] ?? 0}
+          skippedOn={skippedOn}
           onClose={() => setTrendsOpen(false)}
         />
       )}

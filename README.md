@@ -34,6 +34,15 @@ Break reminders are adjustable: tick the box and set how many minutes apart they
 - **Backup reminder**: a banner appears if you have never saved a backup (after 3 days of use) or the last one is over 7 days old. "Later" hides it for 2 days.
 - **Timer**: when a timer ends, tap Stop and you can add its minutes to a habit measured in minutes or hours. The time is added to today's total.
 
+## New in 1.3
+
+- **Share backup** (menu): opens the phone's share sheet so you can send the backup file to Drive, WhatsApp or email. Browsers that cannot share files get a normal download instead. The app cannot see where the file went, so check that it arrived.
+- **Templates**: the New Habit window starts with 10 ready-made habits (water, walk, meditate...). Tap one to fill the form, then change anything.
+- **Rest days**: tick "Rest day" when you hold a day. A rest day neither counts for nor against you: it keeps the streak, and it is left out of the week, month, trend and summary percentages. If you reach the target anyway, the day counts as done. Shown with a moon on the week row and a blue dot in the calendar.
+- **Weekly summary**: a card under the stats comparing this week (Monday to today) with last week, plus the best habit and the one needing attention.
+
+Data format: `skips` (list of {habit_id, date}) is a new optional field; backups contain it, old backups still restore. The CSV export has a new last column, "Rest day".
+
 ## New in 1.2
 
 - **Reorder**: the Reorder button above the habit list shows up/down arrows on every habit. Archived habits are skipped.

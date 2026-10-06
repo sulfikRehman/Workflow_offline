@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { WEEK_ORDER } from '@/lib/stats';
 import { HABIT_COLORS } from '@/lib/colors';
+import { TEMPLATES } from '@/lib/templates';
 import { GOAL_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
@@ -131,6 +132,38 @@ export default function HabitForm({
         </p>
 
         <div className="mt-4 space-y-4">
+          {!editing && (
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-neutral-400">Start from a template</p>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMPLATES.map((t) => {
+                  const Ico = getHabitIcon(t.icon);
+                  return (
+                    <button
+                      type="button"
+                      key={t.name}
+                      onClick={() => {
+                        setName(t.name);
+                        setIcon(t.icon);
+                        setUnit(t.unit);
+                        setTargetText(String(t.target_value));
+                        setColor(t.color);
+                        setError(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white active:scale-95"
+                    >
+                      <Ico className="h-3.5 w-3.5" style={{ color: t.color }} />
+                      {t.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[11px] text-neutral-500">
+                Tap one to fill in the form, then change anything you like.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-xs font-medium text-neutral-400">Name</label>
             <input

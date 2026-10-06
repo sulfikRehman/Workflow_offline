@@ -12,6 +12,8 @@ export type TrendHabit = ChartHabit & Pick<Habit, 'name' | 'icon' | 'color' | 'u
 type Props = {
   habits: TrendHabit[];
   valueOn: (habitId: string, iso: string) => number;
+  /** Is this date a rest day for the habit? */
+  skippedOn: (habitId: string, iso: string) => boolean;
   onClose: () => void;
   /** True while the window plays its closing animation. */
   closing?: boolean;
@@ -144,7 +146,7 @@ function Chart({
   );
 }
 
-export default function TrendsModal({ habits, valueOn, onClose, closing }: Props) {
+export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closing }: Props) {
   const [rangeKey, setRangeKey] = useState<RangeKey>('week');
   const range = RANGES.find((r) => r.key === rangeKey)!;
   const [selected, setSelected] = useState(RANGES[0].count - 1);
@@ -161,14 +163,14 @@ export default function TrendsModal({ habits, valueOn, onClose, closing }: Props
     const span = range.size * range.count;
     const prevEnd = new Date(end);
     prevEnd.setDate(prevEnd.getDate() - span);
-    const buckets = completionBuckets(habits, valueOn, end, range.size, range.count);
-    const prev = completionBuckets(habits, valueOn, prevEnd, range.size, range.count);
+    const buckets = completionBuckets(habits, valueOn, end, range.size, range.count, new Date(), skippedOn);
+    const prev = completionBuckets(habits, valueOn, prevEnd, range.size, range.count, new Date(), skippedOn);
     const perHabit = habits.map((h) => {
-      const one = completionBuckets([h], valueOn, end, span, 1)[0];
+      const one = completionBuckets([h], valueOn, end, span, 1, new Date(), skippedOn)[0];
       return { habit: h, ...one };
     });
     return { buckets, now: overallPct(buckets), before: overallPct(prev), perHabit };
-  }, [habits, valueOn, range]);
+  }, [habits, valueOn, skippedOn, range]);
 
   const delta = data.now !== null && data.before !== null ? data.now - data.before : null;
   const sel = data.buckets[Math.min(selected, data.buckets.length - 1)];
@@ -286,7 +288,7 @@ export default function TrendsModal({ habits, valueOn, onClose, closing }: Props
               })}
             </ul>
             <p className="mt-4 text-[11px] leading-relaxed text-neutral-500">
-              Days before a habit existed and days it isn&apos;t scheduled are left out. Today
+              Days before a habit existed, days it isn&apos;t scheduled and rest days are left out. Today
               counts as it stands now.
             </p>
           </>

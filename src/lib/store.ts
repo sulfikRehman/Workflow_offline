@@ -37,10 +37,16 @@ export type HabitNote = {
   text: string;
 };
 
+/** A day marked as a rest day for one habit: it does not count for or against the streak. */
+export type HabitSkip = {
+  habit_id: string;
+  date: string; // YYYY-MM-DD
+};
+
 export const NOTE_MAX = 200;
 export const GOAL_MAX = 10000;
 
-type DB = { habits: Habit[]; entries: HabitEntry[]; notes: HabitNote[] };
+type DB = { habits: Habit[]; entries: HabitEntry[]; notes: HabitNote[]; skips: HabitSkip[] };
 
 const KEY = 'habitflow:v1';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -74,6 +80,7 @@ function seed(): DB {
     })),
     entries: [],
     notes: [],
+    skips: [],
   };
 }
 
@@ -150,6 +157,11 @@ function isNote(n: unknown): n is HabitNote {
   );
 }
 
+function isSkip(n: unknown): n is HabitSkip {
+  const x = n as HabitSkip;
+  return !!x && typeof x.habit_id === 'string' && typeof x.date === 'string' && DATE_RE.test(x.date);
+}
+
 function validate(data: unknown): DB {
   const d = data as DB;
   if (!d || !Array.isArray(d.habits) || !Array.isArray(d.entries)) {
@@ -167,7 +179,12 @@ function validate(data: unknown): DB {
   if (!Array.isArray(notes) || !notes.every(isNote) || !notes.every((n) => ids.has(n.habit_id))) {
     throw new Error('Invalid data');
   }
-  return { habits: d.habits, entries: d.entries, notes };
+  // Rest days were added later too.
+  const skips = (d as { skips?: unknown }).skips ?? [];
+  if (!Array.isArray(skips) || !skips.every(isSkip) || !skips.every((n) => ids.has(n.habit_id))) {
+    throw new Error('Invalid data');
+  }
+  return { habits: d.habits, entries: d.entries, notes, skips };
 }
 
 let cache: DB | null = null;
@@ -298,6 +315,7 @@ export function deleteHabit(id: string): void {
     habits: db.habits.filter((h) => h.id !== id),
     entries: db.entries.filter((e) => e.habit_id !== id),
     notes: db.notes.filter((n) => n.habit_id !== id),
+    skips: db.skips.filter((n) => n.habit_id !== id),
   };
   write(next);
   cache = next;
@@ -319,6 +337,25 @@ export function setNote(habit_id: string, date: string, text: string): HabitNote
   write(next);
   cache = next;
   return note;
+}
+
+export function getSkips(): HabitSkip[] {
+  return [...load().skips];
+}
+
+/** Marks (or unmarks) a day as a rest day for a habit. */
+export function setSkip(habit_id: string, date: string, on: boolean): void {
+  if (!DATE_RE.test(date)) throw new Error('Invalid day');
+  const db = load();
+  if (!db.habits.some((h) => h.id === habit_id)) throw new Error('Habit not found');
+  const has = db.skips.some((s) => s.habit_id === habit_id && s.date === date);
+  if (has === on) return;
+  const skips = on
+    ? [...db.skips, { habit_id, date }]
+    : db.skips.filter((s) => !(s.habit_id === habit_id && s.date === date));
+  const next = { ...db, skips };
+  write(next);
+  cache = next;
 }
 
 /**
@@ -373,6 +410,7 @@ export function exportBackup(): string {
       habits: db.habits,
       entries: db.entries,
       notes: db.notes,
+      skips: db.skips,
     },
     null,
     2
