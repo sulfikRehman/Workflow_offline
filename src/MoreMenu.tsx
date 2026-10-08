@@ -9,6 +9,8 @@ import {
   setHapticsOn,
 } from '@/lib/haptics';
 import type { HapticLevel } from '@/lib/haptics';
+import { THEME_PREFS, getThemePref, setThemePref } from '@/lib/theme';
+import type { ThemePref } from '@/lib/theme';
 import { usePresence } from './usePresence';
 
 type Props = {
@@ -27,6 +29,8 @@ const LEVEL_LABEL: Record<HapticLevel, string> = {
   strong: 'Strong',
 };
 
+const THEME_LABEL: Record<ThemePref, string> = { dark: 'Dark', light: 'Light', auto: 'Auto' };
+
 const itemCls =
   'no-press flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-200 transition hover:bg-neutral-800 active:bg-neutral-800 disabled:opacity-40 disabled:hover:bg-transparent';
 
@@ -43,6 +47,7 @@ export default function MoreMenu({
   const menu = usePresence(open ? true : null, 140);
   const [vibrationOn, setVibrationOn] = useState(isHapticsOn);
   const [level, setLevel] = useState<HapticLevel>(getHapticLevel);
+  const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Close when you tap outside the menu or press Escape.
@@ -145,6 +150,33 @@ export default function MoreMenu({
               </span>
             </span>
           </button>
+
+          <div className="my-2 border-t border-neutral-800" />
+          <p className="px-3 pb-1 pt-1 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
+            Appearance
+          </p>
+          <div className="px-3 pb-2">
+            <div role="group" aria-label="Theme" className="flex gap-1 rounded-lg border border-neutral-800 p-1">
+              {THEME_PREFS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    setTheme(t);
+                    setThemePref(t);
+                  }}
+                  aria-pressed={theme === t}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 ${
+                    theme === t ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
+                  }`}
+                >
+                  {THEME_LABEL[t]}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[0.6875rem] leading-relaxed text-neutral-500">
+              Auto follows your phone&apos;s light or dark setting.
+            </p>
+          </div>
 
           {hapticsSupported() && (
             <>

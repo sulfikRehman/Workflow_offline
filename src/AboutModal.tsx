@@ -2,7 +2,7 @@ import { Flame, X } from 'lucide-react';
 import { useEscape } from './useEscape';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.3';
+export const APP_VERSION = '1.4';
 
 type Props = {
   habitCount: number;

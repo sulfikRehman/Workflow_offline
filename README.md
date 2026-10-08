@@ -90,3 +90,23 @@ The phone vibrates lightly on every button tap, once per minute as you turn the 
 - Saved data is read defensively: blocked or unreadable storage, or corrupt JSON, no longer stops the app from opening (a copy of unreadable data is kept under `habitflow:v1:corrupt-…`).
 - If a screen ever throws while drawing, a small "Something went wrong — Reload" screen appears instead of a blank page. Data is not touched.
 - Both timers compute time from real timestamps (not tick counts), so throttling or a locked phone does not make them drift.
+
+## Desktop layout
+
+- Below 1024px nothing changed: the same single column as before.
+- From 1024px the stats and weekly summary sit in a sidebar beside the habits; from 1280px the habits are two columns. The page is capped at 1440px wide so ultrawide screens stay balanced.
+- From 1024px text and spacing grow slightly (the page's base size goes 16px → 17px → 18px at 1536px), and the pop-ups get a little wider.
+
+## New in 1.4
+
+- **Today ring** replaces the plain "Today" card: it fills as the day's habits get done.
+- **Finished habits fade** a little (not while reordering, not when looking at another week). With a mouse, pointing at one brings it back.
+- **Year view** in each habit's calendar: Month | Year switch, one square per day for the last 53 weeks in the habit's colour. On a narrow screen it scrolls sideways.
+- **Streak milestones**: a short message and buzz the first time a habit reaches 7, 30 or 100 days (remembered in `habitflow:milestones`, so it does not repeat).
+- **Light theme**: menu → Appearance → Dark / Light / Auto (Auto follows the phone). Dark stays the default.
+
+### Light theme maintenance
+
+The light look is generated from the colour classes used in `src/*.tsx`. If you add a new colour class
+(for example `bg-neutral-700` somewhere new) run `node tools/gen-light-theme.mjs` and commit the updated
+`src/light-theme.css`.

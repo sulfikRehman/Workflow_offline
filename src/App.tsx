@@ -26,7 +26,9 @@ import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import TrendsModal from './TrendsModal';
+import TodayRing from './TodayRing';
 import WeeklyCard from './WeeklyCard';
+import { claimMilestone, crossedMilestone } from '@/lib/milestones';
 import { usePresence } from './usePresence';
 import {
   Archive,
@@ -139,6 +141,26 @@ export default function App() {
     }
     return out;
   }, [activeHabits, entryMap, skipMap]);
+
+  // A small "well done" the first time a habit's streak reaches 7, 30 or 100 days.
+  const lastStreaks = useRef<Record<string, number> | null>(null);
+  useEffect(() => {
+    const now: Record<string, number> = {};
+    for (const h of activeHabits) now[h.id] = streaks[h.id]?.current ?? 0;
+    const before = lastStreaks.current;
+    lastStreaks.current = now;
+    if (!before) return; // first look at the data: nothing to compare with yet
+    for (const h of activeHabits) {
+      if (before[h.id] === undefined) continue;
+      const m = crossedMilestone(before[h.id], now[h.id]);
+      if (m !== null && claimMilestone(h.id, m)) {
+        haptic('milestone');
+        setError(null);
+        setNotice(`🏆 ${m}-day streak on ${h.name}. Well done!`);
+        break;
+      }
+    }
+  }, [streaks, activeHabits]);
 
   // What the Trends window needs: each habit and the first day it counts from.
   const trendHabits = useMemo(
@@ -526,16 +548,15 @@ export default function App() {
         {/* Overview: sits beside the habits on a wide screen, above them on a phone */}
         <aside className="lg:order-2 lg:sticky lg:top-24">
         {/* Stats row */}
-        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-2">
-          <StatCard
-            label="Today"
-            value={`${todayCompleted}/${scheduledToday.length}`}
-            sub="completed"
-            accent
-          />
+        <section className="mb-6 grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-2">
+          <div className="col-span-3 lg:col-span-2">
+            <TodayRing done={todayCompleted} total={scheduledToday.length} />
+          </div>
           <StatCard label="This Week" value={`${weekCompleted}`} sub={`of ${maxWeekChecks} checks`} />
           <StatCard label="Best Streak" value={`${topStreak}`} sub="days" />
-          <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" />
+          <div className="contents lg:block lg:col-span-2">
+            <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" />
+          </div>
         </section>
 
         <WeeklyCard
@@ -895,7 +916,7 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${
+      className={`rounded-2xl border p-3 sm:p-4 ${
         accent ? 'border-green-500/30 bg-green-500/10' : 'border-neutral-800/60 bg-neutral-900/40'
       }`}
     >

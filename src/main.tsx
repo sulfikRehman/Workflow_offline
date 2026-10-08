@@ -4,8 +4,12 @@ import App from './App.tsx';
 import ErrorBoundary from './ErrorBoundary.tsx';
 import { installTapHaptics } from '@/lib/haptics';
 import { noteFirstSeen } from '@/lib/backupNudge';
+import { applyTheme, watchSystemTheme } from '@/lib/theme';
 import './index.css';
+import './light-theme.css';
 
+applyTheme();
+watchSystemTheme();
 installTapHaptics();
 noteFirstSeen();
 

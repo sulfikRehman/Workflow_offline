@@ -236,3 +236,26 @@ button:not(:disabled):active {
 @media (min-width: 1536px) {
   html { font-size: 18px; }
 }
+
+
+/* ---------- Today ring, finished habits, year view ---------- */
+.ring-fill {
+  transition: stroke-dashoffset 450ms var(--ease-out), opacity 150ms var(--ease-out);
+}
+/* A habit that is finished for today fades a little. With a mouse, pointing at it (or tabbing into it)
+   brings it back. Touch screens keep it faded: a tap there would otherwise leave it "hovered". */
+.habit-card {
+  transition: opacity var(--t-small) var(--ease-out), border-color 150ms, background-color 150ms;
+}
+.habit-card.done-today {
+  opacity: 0.72;
+}
+.habit-card.done-today:active,
+.habit-card.done-today:has(:focus-visible) {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .habit-card.done-today:hover {
+    opacity: 1;
+  }
+}

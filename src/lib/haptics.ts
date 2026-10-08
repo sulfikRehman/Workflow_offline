@@ -10,7 +10,8 @@ export type HapticKind =
   | 'undo' // a habit unchecked
   | 'confirm' // something deleted
   | 'breakAlarm'
-  | 'endAlarm';
+  | 'endAlarm'
+  | 'milestone'; // a streak reached 7, 30 or 100 days
 
 // Lengths are in milliseconds. Very short buzzes can be hard to feel on some phones,
 // so these may need tuning after trying them on the real device.
@@ -22,6 +23,7 @@ export const PATTERNS: Record<HapticKind, number | number[]> = {
   confirm: [25, 50, 25],
   breakAlarm: [150, 80, 150],
   endAlarm: [300, 100, 300, 100, 300],
+  milestone: [30, 60, 30, 60, 120],
 };
 
 function readSetting(): boolean {

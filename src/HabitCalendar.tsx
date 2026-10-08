@@ -14,6 +14,7 @@ import {
 } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
+import YearHeatmap from './YearHeatmap';
 import { useEscape } from './useEscape';
 import { backdropCls, sheetAnimCls } from './ui';
 
@@ -49,6 +50,7 @@ export default function HabitCalendar({
   const now = new Date();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [dir, setDir] = useState(0); // which way the month just changed
+  const [mode, setMode] = useState<'month' | 'year'>('month');
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
 
@@ -133,6 +135,27 @@ export default function HabitCalendar({
           </div>
         </div>
 
+        <div role="group" aria-label="View" className="mt-4 flex gap-1 rounded-lg border border-neutral-800 p-1">
+          {(['month', 'year'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              aria-pressed={mode === m}
+              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 ${
+                mode === m ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
+              }`}
+            >
+              {m === 'month' ? 'Month' : 'Year'}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'year' ? (
+          <div key="year" className="fade-anim">
+            <YearHeatmap habit={habit} valueOn={valueOn} isSkipped={isSkipped} />
+          </div>
+        ) : (
+          <>
         <div className="mt-4 flex items-center justify-between">
           <button onClick={() => go(-1)} aria-label="Previous month" className={navCls}>
             <ChevronLeft className="h-5 w-5" />
@@ -259,9 +282,14 @@ export default function HabitCalendar({
           </div>
         )}
 
-        <p className="mt-3 text-center text-[0.6875rem] text-neutral-500">
-          Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = note, blue dot = rest day.
-        </p>
+          </>
+        )}
+
+        {mode === 'month' && (
+          <p className="mt-3 text-center text-[0.6875rem] text-neutral-500">
+            Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = note, blue dot = rest day.
+          </p>
+        )}
       </div>
     </div>
   );

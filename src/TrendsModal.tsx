@@ -85,11 +85,11 @@ function Chart({
             x2={W - 4}
             y1={y(g)}
             y2={y(g)}
-            stroke="#262626"
+            className="stroke-neutral-800"
             strokeWidth={1}
             strokeDasharray={g === 0 ? undefined : '3 3'}
           />
-          <text x={PAD_L - 5} y={y(g) + 3} textAnchor="end" fontSize={9} fill="#737373">
+          <text x={PAD_L - 5} y={y(g) + 3} textAnchor="end" fontSize={9} className="fill-neutral-500">
             {g}%
           </text>
         </g>
@@ -115,7 +115,7 @@ function Chart({
             {/* wide invisible target so thin bars are easy to tap */}
             <rect x={cx - slot / 2} y={PAD_T} width={slot} height={plotH + PAD_B} fill="transparent" />
             {b.pct === null ? (
-              <rect x={cx - barW / 2} y={y(0) - 2} width={barW} height={2} rx={1} fill="#404040" />
+              <rect x={cx - barW / 2} y={y(0) - 2} width={barW} height={2} rx={1} className="fill-neutral-700" />
             ) : (
               <rect
                 x={cx - barW / 2}
@@ -134,7 +134,7 @@ function Chart({
                 y={H - 4}
                 textAnchor="middle"
                 fontSize={buckets.length > 14 ? 8 : 9}
-                fill={isSel ? '#e5e5e5' : '#737373'}
+                className={isSel ? 'fill-neutral-200' : 'fill-neutral-500'}
               >
                 {label}
               </text>

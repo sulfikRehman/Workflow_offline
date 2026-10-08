@@ -69,13 +69,21 @@ export default function HabitRow({
   const weekPct = pct(weekTotal, weekTarget);
   const todayVal = valueOn(todayISO());
   const todayPct = pct(todayVal, habit.target_value);
+  // Finished for today: the card fades a little so the unfinished ones stand out (not while reordering).
+  const doneToday =
+    !reorder && habit.target_value > 0 && todayVal >= habit.target_value && weekDays.some((d) => isToday(d));
   const schedule = scheduleLabel(habit.days);
   const goal = goalProgress(habit, allValues);
   const iconBtn =
     'flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white';
 
   return (
-    <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70">
+    <div
+      data-done-today={doneToday ? 'true' : undefined}
+      className={`habit-card rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70${
+        doneToday ? ' done-today' : ''
+      }`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
