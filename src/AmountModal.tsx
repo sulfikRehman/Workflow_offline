@@ -144,7 +144,7 @@ export default function AmountModal({
           placeholder="e.g. skipped, was sick"
           className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-green-500 focus:outline-none"
         />
-        <p className="mt-1 text-right text-[11px] tabular-nums text-neutral-600">
+        <p className="mt-1 text-right text-[0.6875rem] tabular-nums text-neutral-600">
           {note.length}/{NOTE_MAX}
         </p>
 
@@ -157,7 +157,7 @@ export default function AmountModal({
           />
           <span className="text-xs text-neutral-300">
             Rest day
-            <span className="block text-[11px] text-neutral-500">
+            <span className="block text-[0.6875rem] text-neutral-500">
               Doesn&apos;t break your streak and isn&apos;t counted against you. If you reach the
               target anyway, it counts as done.
             </span>

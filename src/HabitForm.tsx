@@ -108,7 +108,7 @@ export default function HabitForm({
     <button
       type="button"
       onClick={() => setDays(list)}
-      className="text-[11px] font-medium text-green-400 underline-offset-2 hover:underline"
+      className="text-[0.6875rem] font-medium text-green-400 underline-offset-2 hover:underline"
     >
       {list.length === 7 ? 'Every day' : 'Weekdays'}
     </button>
@@ -122,7 +122,7 @@ export default function HabitForm({
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <h2 className="text-base font-semibold text-white">
           {editing ? 'Edit Habit' : 'New Habit'}
@@ -158,7 +158,7 @@ export default function HabitForm({
                   );
                 })}
               </div>
-              <p className="mt-1.5 text-[11px] text-neutral-500">
+              <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
                 Tap one to fill in the form, then change anything you like.
               </p>
             </div>
@@ -209,7 +209,7 @@ export default function HabitForm({
             </div>
           </div>
           {targetChanged && (
-            <p className="-mt-2 text-[11px] text-amber-400">
+            <p className="-mt-2 text-[0.6875rem] text-amber-400">
               Changing the target also changes which past days count as done.
             </p>
           )}
@@ -242,7 +242,7 @@ export default function HabitForm({
                 );
               })}
             </div>
-            <p className="mt-1.5 text-[11px] text-neutral-500">
+            <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
               Days the habit isn&apos;t scheduled don&apos;t break your streak.
             </p>
           </div>
@@ -329,7 +329,7 @@ export default function HabitForm({
                   />
                   <span className="shrink-0 text-xs text-neutral-400">days</span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-neutral-500">
+                <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
                   {habit?.goal
                     ? `Counting days since ${habit.goal.start}. Changing the number keeps that start day.`
                     : 'Counts the days you reach the daily target, starting from the day you set the goal.'}
@@ -384,7 +384,7 @@ export default function HabitForm({
                 <Trash2 className="h-4 w-4" /> Delete
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-neutral-500">
+            <p className="mt-2 text-[0.6875rem] text-neutral-500">
               Archiving hides the habit but keeps its history. Deleting removes it for good.
             </p>
           </div>

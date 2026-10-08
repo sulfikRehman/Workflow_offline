@@ -102,14 +102,14 @@ export default function MoreMenu({
           aria-label="Menu"
           className={`menu-anim${menu.closing ? ' closing' : ''} absolute right-0 top-full z-30 mt-2 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-2xl shadow-black/50`}
         >
-          <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+          <p className="px-3 pb-1 pt-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
             Your data
           </p>
           <button onClick={() => run(onSaveBackup)} className={itemCls}>
             <Save className="h-4 w-4 shrink-0 text-neutral-400" />
             <span>
               Save backup
-              <span className="block text-[11px] text-neutral-500">
+              <span className="block text-[0.6875rem] text-neutral-500">
                 Download everything as a file
               </span>
             </span>
@@ -118,7 +118,7 @@ export default function MoreMenu({
             <Share2 className="h-4 w-4 shrink-0 text-neutral-400" />
             <span>
               Share backup
-              <span className="block text-[11px] text-neutral-500">
+              <span className="block text-[0.6875rem] text-neutral-500">
                 Send the file to Drive, WhatsApp or email
               </span>
             </span>
@@ -127,7 +127,7 @@ export default function MoreMenu({
             <Upload className="h-4 w-4 shrink-0 text-neutral-400" />
             <span>
               Restore backup
-              <span className="block text-[11px] text-neutral-500">
+              <span className="block text-[0.6875rem] text-neutral-500">
                 Upload a backup file
               </span>
             </span>
@@ -140,7 +140,7 @@ export default function MoreMenu({
             <Download className="h-4 w-4 shrink-0 text-neutral-400" />
             <span>
               Export CSV
-              <span className="block text-[11px] text-neutral-500">
+              <span className="block text-[0.6875rem] text-neutral-500">
                 Download your history as a spreadsheet
               </span>
             </span>
@@ -149,7 +149,7 @@ export default function MoreMenu({
           {hapticsSupported() && (
             <>
               <div className="my-2 border-t border-neutral-800" />
-              <p className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+              <p className="px-3 pb-1 pt-1 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
                 Vibration
               </p>
               <div className="flex items-center justify-between gap-3 px-3 py-2">
@@ -189,7 +189,7 @@ export default function MoreMenu({
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
+                <p className="mt-1.5 text-[0.6875rem] leading-relaxed text-neutral-500">
                   Phones can only change how long a buzz lasts, not how hard it is.
                 </p>
               </div>
@@ -201,7 +201,7 @@ export default function MoreMenu({
             <Info className="h-4 w-4 shrink-0 text-neutral-400" />
             <span>
               About
-              <span className="block text-[11px] text-neutral-500">
+              <span className="block text-[0.6875rem] text-neutral-500">
                 What this app is, tips and your data
               </span>
             </span>

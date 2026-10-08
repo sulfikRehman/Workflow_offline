@@ -30,7 +30,7 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
     <div className={backdropCls(closing)} onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -67,12 +67,12 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
               className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3 text-center"
             >
               <p className="text-lg font-bold tabular-nums text-white">{n}</p>
-              <p className="text-[10px] uppercase tracking-wider text-neutral-500">{label}</p>
+              <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">{label}</p>
             </div>
           ))}
         </div>
 
-        <h3 className="mb-2 mt-5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+        <h3 className="mb-2 mt-5 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
           How to use it
         </h3>
         <ul className="space-y-1.5 text-sm text-neutral-300">
@@ -83,7 +83,7 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
           ))}
         </ul>
 
-        <h3 className="mb-2 mt-5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+        <h3 className="mb-2 mt-5 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
           Your data
         </h3>
         <p className="text-sm leading-relaxed text-neutral-300">
@@ -93,7 +93,7 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
           to send it to Drive or WhatsApp. <span className="font-medium text-white">Restore backup</span>{' '}
           puts it back, notes and rest days included.
         </p>
-        <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+        <p className="mt-3 text-[0.6875rem] leading-relaxed text-neutral-500">
           The timer&apos;s beeps and vibration work while this screen is open. This version does not
           send reminders when the app is closed.
         </p>

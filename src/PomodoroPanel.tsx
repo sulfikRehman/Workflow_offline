@@ -178,7 +178,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
 
   const inputCls =
     'w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-center text-sm text-white focus:border-green-500 focus:outline-none disabled:opacity-50';
-  const labelCls = 'mb-1 block text-[11px] font-medium text-neutral-400';
+  const labelCls = 'mb-1 block text-[0.6875rem] font-medium text-neutral-400';
 
   // Dots for the focus sessions in this round: filled = finished, ring = the current one.
   const doneInRound = where.kind === 'focus' ? where.session - 1 : where.session;
@@ -259,7 +259,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
           </div>
         ))}
       </div>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
+      <p className="mt-1.5 text-[0.6875rem] leading-relaxed text-neutral-500">
         Focus, short break, focus... and a long break after the last session of the round, then it
         starts over until you press Reset. Each change of phase beeps twice.
       </p>
@@ -296,7 +296,7 @@ export default function PomodoroPanel({ onActiveChange, onStopped }: Props) {
         </button>
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+      <p className="mt-3 text-[0.6875rem] leading-relaxed text-neutral-500">
         Keep this screen open: the app keeps the display awake while it runs, but beeps may not
         play if the phone is locked or the app is in the background.
       </p>

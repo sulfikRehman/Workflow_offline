@@ -226,3 +226,13 @@ button:not(:disabled):active {
     transform: none;
   }
 }
+
+
+/* ---------- Desktop: a little more room, same look ---------- */
+/* Sizes in rem grow a touch on a big screen; phones keep the 16px base. */
+@media (min-width: 1024px) {
+  html { font-size: 17px; }
+}
+@media (min-width: 1536px) {
+  html { font-size: 18px; }
+}

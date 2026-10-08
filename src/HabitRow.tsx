@@ -107,7 +107,7 @@ export default function HabitRow({
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold text-white">{habit.name}</h3>
-            <p className="truncate text-[11px] text-neutral-500">
+            <p className="truncate text-[0.6875rem] text-neutral-500">
               Target: {round2(habit.target_value)} {habit.unit}/day
               {schedule ? ` · ${schedule}` : ''}
             </p>
@@ -122,7 +122,7 @@ export default function HabitRow({
             {round2(todayVal)}
             <span className="text-neutral-500"> / {round2(habit.target_value)}</span>
           </p>
-          <p className="text-[11px] text-neutral-500">{habit.unit} today</p>
+          <p className="text-[0.6875rem] text-neutral-500">{habit.unit} today</p>
         </button>
       </div>
 
@@ -139,7 +139,7 @@ export default function HabitRow({
       {/* Long-term goal */}
       {goal && (
         <div className="mt-3">
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex items-center justify-between text-[0.6875rem]">
             <span
               className={`flex items-center gap-1 ${goal.reached ? 'text-green-400' : 'text-neutral-400'}`}
             >
@@ -189,12 +189,12 @@ export default function HabitRow({
               }${rest ? ', rest day' : ''}`}
             >
               <span
-                className={`text-[10px] font-medium ${today ? 'text-green-400' : 'text-neutral-500'}`}
+                className={`text-[0.625rem] font-medium ${today ? 'text-green-400' : 'text-neutral-500'}`}
               >
                 {dayLabel(d)}
               </span>
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] transition-colors duration-200 ${
+                className={`flex h-6 w-6 items-center justify-center rounded-md text-[0.625rem] transition-colors duration-200 ${
                   done ? 'text-neutral-950' : partial ? 'text-white' : 'text-neutral-600'
                 }`}
                 style={{
@@ -211,7 +211,7 @@ export default function HabitRow({
                   ''
                 )}
               </span>
-              <span className="relative text-[9px] text-neutral-600">
+              <span className="relative text-[0.5625rem] text-neutral-600">
                 {d.getDate()}
                 {hasNote(iso) && (
                   <span
@@ -226,7 +226,7 @@ export default function HabitRow({
       </div>
 
       {/* Week summary */}
-      <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-500">
+      <div className="mt-3 flex items-center justify-between text-[0.6875rem] text-neutral-500">
         <span className="flex items-center gap-1">
           <TrendingUp className="h-3.5 w-3.5 text-neutral-600" />
           {round2(weekTotal)} / {round2(weekTarget)} {habit.unit} this week

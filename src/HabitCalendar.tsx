@@ -83,7 +83,7 @@ export default function HabitCalendar({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -112,7 +112,7 @@ export default function HabitCalendar({
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">Streak</p>
+            <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">Streak</p>
             <p className="mt-0.5 flex items-center gap-1 text-lg font-bold tabular-nums text-white">
               <Flame
                 className={`h-4 w-4 ${streak.current > 0 ? 'text-green-400' : 'text-neutral-600'}`}
@@ -121,11 +121,11 @@ export default function HabitCalendar({
             </p>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">Best</p>
+            <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">Best</p>
             <p className="mt-0.5 text-lg font-bold tabular-nums text-white">{streak.best}</p>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">This month</p>
+            <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">This month</p>
             <p className="mt-0.5 text-lg font-bold tabular-nums text-white">
               {summary.done}
               <span className="text-sm font-medium text-neutral-500">/{summary.scheduled}</span>
@@ -139,7 +139,7 @@ export default function HabitCalendar({
           </button>
           <div className="text-center">
             <p className="text-sm font-medium text-white">{title}</p>
-            <p className="text-[11px] text-neutral-500">
+            <p className="text-[0.6875rem] text-neutral-500">
               {summary.scheduled > 0 ? `${summary.pct}% of scheduled days done` : 'No scheduled days yet'}
             </p>
           </div>
@@ -155,7 +155,7 @@ export default function HabitCalendar({
 
         <div className="mt-3 grid grid-cols-7 gap-1.5 text-center">
           {HEAD.map((h) => (
-            <span key={h} className="text-[10px] font-medium text-neutral-500">
+            <span key={h} className="text-[0.625rem] font-medium text-neutral-500">
               {h}
             </span>
           ))}
@@ -235,7 +235,7 @@ export default function HabitCalendar({
 
         {monthNotes.length > 0 && (
           <div key={`n-${view.y}-${view.m}`} className="fade-anim mt-4">
-            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+            <p className="mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
               Notes this month
             </p>
             <ul className="space-y-1.5">
@@ -259,7 +259,7 @@ export default function HabitCalendar({
           </div>
         )}
 
-        <p className="mt-3 text-center text-[11px] text-neutral-500">
+        <p className="mt-3 text-center text-[0.6875rem] text-neutral-500">
           Tap a day to mark it done · hold it to enter an amount or a note. Dashed days aren&apos;t scheduled. Amber dot = note, blue dot = rest day.
         </p>
       </div>

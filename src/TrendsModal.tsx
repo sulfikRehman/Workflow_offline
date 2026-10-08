@@ -179,7 +179,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
     <div className={backdropCls(closing)} onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -222,7 +222,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
           <>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">
                   {range.text}
                 </p>
                 <p className="mt-0.5 text-2xl font-bold tabular-nums text-white">
@@ -230,7 +230,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
                 </p>
               </div>
               <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                <p className="text-[0.625rem] uppercase tracking-wider text-neutral-500">
                   vs the period before
                 </p>
                 <p
@@ -260,7 +260,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
               </p>
             </div>
 
-            <p className="mb-2 mt-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+            <p className="mb-2 mt-4 text-[0.6875rem] font-medium uppercase tracking-wider text-neutral-500">
               By habit · {range.text}
             </p>
             <ul className="space-y-2">
@@ -290,7 +290,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
                 );
               })}
             </ul>
-            <p className="mt-4 text-[11px] leading-relaxed text-neutral-500">
+            <p className="mt-4 text-[0.6875rem] leading-relaxed text-neutral-500">
               Days before a habit existed, days it isn&apos;t scheduled and rest days are left out. Today
               counts as it stands now.
             </p>

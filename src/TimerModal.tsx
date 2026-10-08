@@ -10,6 +10,7 @@ import TimerDial from '@/TimerDial';
 import PomodoroPanel from './PomodoroPanel';
 import { backdropCls, sheetAnimCls } from './ui';
 import { usePresence } from './usePresence';
+import { useEscape } from './useEscape';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
 type Mode = 'timer' | 'pomodoro';
@@ -218,6 +219,10 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
     if ((locked || pomoActive) && !window.confirm('Stop the timer and close?')) return;
     onClose();
   }
+  // Esc closes it too (asks first if a timer is running); ignored while the window is already closing.
+  useEscape(() => {
+    if (!closing) requestClose();
+  });
 
   /** A Pomodoro was stopped: offer to add its focus minutes to a habit. */
   function pomodoroStopped(minutes: number) {
@@ -308,7 +313,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
                       No
                     </button>
                   </div>
-                  <p className="mt-1.5 text-[11px] text-neutral-500">
+                  <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
                     Only habits measured in minutes or hours are listed. The time is added to today.
                   </p>
                 </div>
@@ -337,7 +342,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -413,7 +418,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
                     +5
                   </button>
                 </div>
-                <p className="mt-2 text-center text-[11px] text-neutral-500">
+                <p className="mt-2 text-center text-[0.6875rem] text-neutral-500">
                   One turn of the dial = 60 minutes (up to 12 hours).
                   {breakActive && ' Amber dots mark break reminders.'}
                 </p>
@@ -463,7 +468,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
               </button>
             </div>
             {breakOn && !breakActive && (
-              <p className="mt-1.5 text-[11px] text-amber-400">
+              <p className="mt-1.5 text-[0.6875rem] text-amber-400">
                 The break interval must be at least 1 and shorter than the timer length, so no
                 break reminders will play.
               </p>
@@ -503,7 +508,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             </button>
           </div>
   
-          <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+          <p className="mt-3 text-[0.6875rem] leading-relaxed text-neutral-500">
             Keep this screen open: the app keeps the display awake while the timer runs, but
             beeps may not play if the phone is locked or the app is in the background.
           </p>

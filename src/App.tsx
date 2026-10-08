@@ -471,14 +471,14 @@ export default function App() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl 2xl:max-w-[1440px]">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/30">
               <Flame className="h-5 w-5 text-green-400" />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-base font-semibold tracking-tight text-white">HabitFlow</h1>
-              <p className="text-[11px] text-neutral-500">Track your daily routines</p>
+              <p className="text-[0.6875rem] text-neutral-500">Track your daily routines</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -503,6 +503,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setAdding(true)}
+              aria-label="New habit"
               className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400"
             >
               <Plus className="h-4 w-4" />
@@ -520,9 +521,12 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:max-w-6xl lg:px-8 lg:py-10 xl:max-w-7xl 2xl:max-w-[1440px]">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-10">
+        {/* Overview: sits beside the habits on a wide screen, above them on a phone */}
+        <aside className="lg:order-2 lg:sticky lg:top-24">
         {/* Stats row */}
-        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-2">
           <StatCard
             label="Today"
             value={`${todayCompleted}/${scheduledToday.length}`}
@@ -538,6 +542,9 @@ export default function App() {
           summary={weekly}
           nameOf={(id) => habits.find((h) => h.id === id)?.name ?? ''}
         />
+        </aside>
+
+        <div className="min-w-0 lg:order-1">
 
         {/* Week selector */}
         <div className="mb-4 flex items-center justify-between">
@@ -555,7 +562,7 @@ export default function App() {
             <p className="text-sm font-medium text-white">
               {shortDate(weekDays[0])} – {shortDate(weekDays[6])}
             </p>
-            <p className="text-[11px] text-neutral-500">
+            <p className="text-[0.6875rem] text-neutral-500">
               {weekDays.some((d) => isToday(d)) ? 'This week' : 'Viewing week'}
             </p>
           </div>
@@ -686,10 +693,10 @@ export default function App() {
           </div>
         ) : (
           <>
-            <p className="mb-3 text-center text-[11px] text-neutral-500">
+            <p className="mb-3 text-center text-[0.6875rem] text-neutral-500">
               Tap a day to mark it done · hold a day, or tap today&apos;s total, to enter an amount
             </p>
-            <div className="space-y-3">
+            <div className="space-y-3 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
               {activeHabits.map((habit, i) => (
                 <div
                   key={habit.id}
@@ -786,6 +793,8 @@ export default function App() {
             </div>
           </section>
         )}
+        </div>
+        </div>
       </main>
 
       {addP.item && (
@@ -890,13 +899,13 @@ function StatCard({
         accent ? 'border-green-500/30 bg-green-500/10' : 'border-neutral-800/60 bg-neutral-900/40'
       }`}
     >
-      <p className="text-[11px] uppercase tracking-wider text-neutral-500">{label}</p>
+      <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">{label}</p>
       <p
         className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
       >
         {value}
       </p>
-      <p className="text-[11px] text-neutral-500">{sub}</p>
+      <p className="text-[0.6875rem] text-neutral-500">{sub}</p>
     </div>
   );
 }

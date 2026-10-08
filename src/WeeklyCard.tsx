@@ -19,7 +19,7 @@ export default function WeeklyCard({ summary, nameOf }: Props) {
     >
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500">Weekly summary</p>
+          <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">Weekly summary</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-white">
             {thisWeek.pct}%
             <span className="ml-2 text-xs font-medium text-neutral-500">
@@ -39,7 +39,7 @@ export default function WeeklyCard({ summary, nameOf }: Props) {
           >
             {deltaText}
             {lastWeek.pct !== null && (
-              <span className="block text-[11px] font-normal text-neutral-500">
+              <span className="block text-[0.6875rem] font-normal text-neutral-500">
                 last week {lastWeek.pct}%
               </span>
             )}
