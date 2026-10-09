@@ -1,5 +1,5 @@
-const CACHE = 'habitflow-v1';
-const CORE = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+const CACHE = 'habitflow-v2';
+const CORE = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

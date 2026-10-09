@@ -3,7 +3,7 @@ import { useEscape } from './useEscape';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.5';
+export const APP_VERSION = '1.5.1';
 
 type Props = {
   habitCount: number;

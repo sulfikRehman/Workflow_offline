@@ -37,7 +37,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Pencil,
   ArrowUpDown,
   Check as CheckIcon,
@@ -496,9 +495,7 @@ export default function App() {
       <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl 2xl:max-w-[1440px]">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/30">
-              <Flame className="h-5 w-5 text-green-400" />
-            </div>
+            <img src="/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
             <div className="hidden sm:block">
               <h1 className="text-base font-semibold tracking-tight text-white">HabitFlow</h1>
               <p className="text-[0.6875rem] text-neutral-500">Track your daily routines</p>
