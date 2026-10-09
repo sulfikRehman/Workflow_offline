@@ -110,3 +110,14 @@ The phone vibrates lightly on every button tap, once per minute as you turn the 
 The light look is generated from the colour classes used in `src/*.tsx`. If you add a new colour class
 (for example `bg-neutral-700` somewhere new) run `node tools/gen-light-theme.mjs` and commit the updated
 `src/light-theme.css`.
+
+## New in 1.5 (UI polish pass)
+
+- **Tap targets:** small icon buttons, tabs, chips and switches use the `.hit` class (index.css). It adds an invisible ~6px border of touch area without changing the layout.
+- **Phone dashboard order:** Today ring and stats, then the week and habits, then the Weekly summary. On desktop the right-hand column is unchanged.
+- **Number feedback:** `Bump.tsx` replays a 220ms scale on the Today count, stat cards and streak when the number changes (opacity-only with reduced motion).
+- **Safe areas:** header and page bottom respect `env(safe-area-inset-*)` on notched phones.
+- **Empty states:** friendlier copy for no habits and for Trends with no habits.
+- **Accessibility:** the Timer break interval input now has an accessible name.
+- Data model, storage and streak logic are unchanged.
+- After adding new colour classes, run `node tools/gen-light-theme.mjs`.

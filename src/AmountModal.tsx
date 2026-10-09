@@ -5,7 +5,9 @@ import { parseISODate, round2 } from '@/lib/stats';
 import { todayISO } from '@/lib/date';
 import { NOTE_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
+import { useId } from 'react';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
 type Props = {
@@ -51,6 +53,8 @@ export default function AmountModal({
   const [error, setError] = useState<string | null>(null);
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
+  const dlg = useDialog<HTMLFormElement>(`Amount for ${habit.name}`);
+  const uid = useId();
 
   function submit(e?: FormEvent) {
     e?.preventDefault();
@@ -73,7 +77,8 @@ export default function AmountModal({
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-center gap-3">
           <div
@@ -90,10 +95,11 @@ export default function AmountModal({
           </div>
         </div>
 
-        <label className="mb-1.5 mt-4 block text-xs font-medium text-neutral-400">
+        <label htmlFor={`${uid}-amount`} className="mb-1.5 mt-4 block text-xs font-medium text-neutral-400">
           How much did you do? ({habit.unit})
         </label>
         <input
+          id={`${uid}-amount`}
           autoFocus
           type="number"
           inputMode="decimal"
@@ -133,10 +139,11 @@ export default function AmountModal({
           </button>
         </div>
 
-        <label className="mb-1.5 mt-4 block text-xs font-medium text-neutral-400">
+        <label htmlFor={`${uid}-note`} className="mb-1.5 mt-4 block text-xs font-medium text-neutral-400">
           Note (optional)
         </label>
         <textarea
+          id={`${uid}-note`}
           value={note}
           maxLength={NOTE_MAX}
           rows={2}

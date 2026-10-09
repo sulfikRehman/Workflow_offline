@@ -15,6 +15,7 @@ import { dayLabel, isToday, toISODate, todayISO } from '@/lib/date';
 import { goalProgress, isActiveDay, isCountedDay, round2, scheduleLabel } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
+import Bump from './Bump';
 
 function pct(value: number, target: number): number {
   if (target <= 0) return 0;
@@ -75,7 +76,7 @@ export default function HabitRow({
   const schedule = scheduleLabel(habit.days);
   const goal = goalProgress(habit, allValues);
   const iconBtn =
-    'flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white';
+    'hit flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-neutral-800 hover:text-white';
 
   return (
     <div
@@ -251,7 +252,7 @@ export default function HabitRow({
         >
           <Flame className="h-3.5 w-3.5" />
           {streak.current > 0
-            ? `${streak.current} ${streak.current === 1 ? 'day' : 'days'} streak`
+            ? <span><Bump value={streak.current} /> {streak.current === 1 ? 'day' : 'days'} streak</span>
             : 'No streak yet'}
           <span className="text-neutral-500">· best {streak.best}</span>
         </span>

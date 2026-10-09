@@ -91,7 +91,7 @@ export default function MoreMenu({
         aria-expanded={open}
         aria-haspopup="true"
         aria-label={open ? 'Close menu' : 'Open menu'}
-        className={`inline-flex items-center rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
+        className={`hit inline-flex items-center rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
           open
             ? 'border-neutral-600 bg-neutral-800 text-white'
             : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'
@@ -165,7 +165,7 @@ export default function MoreMenu({
                     setThemePref(t);
                   }}
                   aria-pressed={theme === t}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 ${
+                  className={`hit flex-1 rounded-md py-2 text-xs font-medium transition-colors duration-200 ${
                     theme === t ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
                   }`}
                 >
@@ -191,7 +191,7 @@ export default function MoreMenu({
                   aria-checked={vibrationOn}
                   aria-label="Haptic feedback"
                   onClick={toggleVibration}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+                  className={`hit relative h-6 w-11 shrink-0 rounded-full transition ${
                     vibrationOn ? 'bg-green-500' : 'bg-neutral-700'
                   }`}
                 >
@@ -211,7 +211,7 @@ export default function MoreMenu({
                       onClick={() => chooseLevel(l)}
                       disabled={!vibrationOn}
                       aria-pressed={level === l}
-                      className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
+                      className={`hit flex-1 rounded-md py-2 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
                         level === l
                           ? 'bg-green-500 text-neutral-950'
                           : 'text-neutral-300 hover:bg-neutral-800'

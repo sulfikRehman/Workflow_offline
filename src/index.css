@@ -205,7 +205,11 @@ button:not(:disabled):active {
 
 /* People who turn animations off in their phone settings get no movement at all: windows and
    cards just fade in quickly, and things that leave disappear at once. */
+@keyframes num-bump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.num-bump { animation: num-bump 220ms var(--ease-out, ease-out); }
+
 @media (prefers-reduced-motion: reduce) {
+  @keyframes num-bump { from { opacity: 0.6; } to { opacity: 1; } }
   @keyframes sheet-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes pop-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes menu-in { from { opacity: 0; } to { opacity: 1; } }
@@ -259,3 +263,7 @@ button:not(:disabled):active {
     opacity: 1;
   }
 }
+
+/* Enlarged invisible tap area (about 44px) without changing the layout. */
+.hit:where(:not(.absolute, .fixed, .sticky, .relative)) { position: relative; }
+.hit::after { content: ''; position: absolute; inset: -6px; }

@@ -16,6 +16,7 @@ import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
 import YearHeatmap from './YearHeatmap';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
 type Props = {
@@ -53,6 +54,7 @@ export default function HabitCalendar({
   const [mode, setMode] = useState<'month' | 'year'>('month');
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
+  const dlg = useDialog<HTMLDivElement>(`Calendar for ${habit.name}`);
 
   const today = todayISO();
   const atCurrentMonth = view.y === now.getFullYear() && view.m === now.getMonth();
@@ -85,7 +87,8 @@ export default function HabitCalendar({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -106,7 +109,7 @@ export default function HabitCalendar({
           <button
             onClick={onClose}
             aria-label="Close calendar"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
+            className="hit flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -141,7 +144,7 @@ export default function HabitCalendar({
               key={m}
               onClick={() => setMode(m)}
               aria-pressed={mode === m}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 ${
+              className={`hit flex-1 rounded-md py-2 text-xs font-medium transition-colors duration-200 ${
                 mode === m ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
               }`}
             >

@@ -26,6 +26,7 @@ import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import TrendsModal from './TrendsModal';
+import Bump from './Bump';
 import TodayRing from './TodayRing';
 import WeeklyCard from './WeeklyCard';
 import { claimMilestone, crossedMilestone } from '@/lib/milestones';
@@ -492,7 +493,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95">
+      <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl 2xl:max-w-[1440px]">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/30">
@@ -517,7 +518,7 @@ export default function App() {
             />
             <button
               onClick={() => setTimerOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white sm:px-3"
+              className="hit inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white sm:px-3"
               aria-label="Open timer"
             >
               <Timer className="h-4 w-4" />
@@ -526,7 +527,7 @@ export default function App() {
             <button
               onClick={() => setAdding(true)}
               aria-label="New habit"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400"
+              className="hit inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-2.5 py-2 text-sm font-medium text-neutral-950 transition hover:bg-green-400"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Habit</span>
@@ -543,12 +544,12 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:max-w-6xl lg:px-8 lg:py-10 xl:max-w-7xl 2xl:max-w-[1440px]">
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-10">
+      <main className="mx-auto max-w-5xl px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:py-8 lg:max-w-6xl lg:px-8 lg:py-10 xl:max-w-7xl 2xl:max-w-[1440px]">
+        <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-10">
         {/* Overview: sits beside the habits on a wide screen, above them on a phone */}
-        <aside className="lg:order-2 lg:sticky lg:top-24">
+        <aside className="contents lg:order-2 lg:block lg:sticky lg:top-24">
         {/* Stats row */}
-        <section className="mb-6 grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-2">
+        <section className="order-1 mb-6 grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-2">
           <div className="col-span-3 lg:col-span-2">
             <TodayRing done={todayCompleted} total={scheduledToday.length} />
           </div>
@@ -559,13 +560,15 @@ export default function App() {
           </div>
         </section>
 
-        <WeeklyCard
-          summary={weekly}
-          nameOf={(id) => habits.find((h) => h.id === id)?.name ?? ''}
-        />
+        <div className="order-3 mt-6 empty:hidden lg:order-none lg:mt-0">
+          <WeeklyCard
+            summary={weekly}
+            nameOf={(id) => habits.find((h) => h.id === id)?.name ?? ''}
+          />
+        </div>
         </aside>
 
-        <div className="min-w-0 lg:order-1">
+        <div className="order-2 min-w-0 lg:order-1">
 
         {/* Week selector */}
         <div className="mb-4 flex items-center justify-between">
@@ -574,7 +577,7 @@ export default function App() {
               setWeekDir(-1);
               setWeekRef((r) => shiftWeek(r, -1));
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
+            className="hit flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
             aria-label="Previous week"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -592,7 +595,7 @@ export default function App() {
               setWeekDir(1);
               setWeekRef((r) => shiftWeek(r, 1));
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
+            className="hit flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition hover:border-neutral-700 hover:text-white"
             aria-label="Next week"
           >
             <ChevronRight className="h-5 w-5" />
@@ -672,7 +675,7 @@ export default function App() {
         <div className="mb-3 flex items-center justify-between gap-2">
           <button
             onClick={() => setTrendsOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
+            className="hit inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
           >
             <TrendingUp className="h-4 w-4" /> Trends
           </button>
@@ -680,7 +683,7 @@ export default function App() {
             <button
               onClick={() => setReordering((r) => !r)}
               aria-pressed={reordering}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+              className={`hit inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
                 reordering
                   ? 'border-green-500 bg-green-500/15 text-green-400'
                   : 'border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white'
@@ -702,7 +705,7 @@ export default function App() {
             <p className="mt-1 text-xs text-neutral-500">
               {archivedHabits.length > 0
                 ? 'Restore one from Archived below, or add a new one.'
-                : 'Add your first habit to start tracking.'}
+                : 'Start small and build a routine that works for you. Your first habit takes about 10 seconds to add.'}
             </p>
             <button
               onClick={() => setAdding(true)}
@@ -924,7 +927,7 @@ function StatCard({
       <p
         className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
       >
-        {value}
+        <Bump value={value} />
       </p>
       <p className="text-[0.6875rem] text-neutral-500">{sub}</p>
     </div>

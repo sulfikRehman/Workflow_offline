@@ -1,8 +1,9 @@
 import { Flame, X } from 'lucide-react';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.4';
+export const APP_VERSION = '1.5';
 
 type Props = {
   habitCount: number;
@@ -26,11 +27,13 @@ const TIPS: [string, string][] = [
 
 export default function AboutModal({ habitCount, checkIns, noteCount, onClose, closing }: Props) {
   useEscape(onClose);
+  const dlg = useDialog<HTMLDivElement>('About HabitFlow');
   return (
     <div className={backdropCls(closing)} onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -45,7 +48,7 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
           <button
             onClick={onClose}
             aria-label="Close about"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
+            className="hit flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>

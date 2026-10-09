@@ -5,6 +5,7 @@ import { completionBuckets, overallPct, parseISODate } from '@/lib/stats';
 import type { Bucket, ChartHabit } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
 export type TrendHabit = ChartHabit & Pick<Habit, 'name' | 'icon' | 'color' | 'unit'>;
@@ -151,6 +152,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
   const range = RANGES.find((r) => r.key === rangeKey)!;
   const [selected, setSelected] = useState(RANGES[0].count - 1);
   useEscape(onClose);
+  const dlg = useDialog<HTMLDivElement>('Trends');
 
   function pickRange(key: RangeKey) {
     const r = RANGES.find((x) => x.key === key)!;
@@ -179,7 +181,8 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
     <div className={backdropCls(closing)} onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md lg:max-w-xl overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -191,7 +194,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
           <button
             onClick={onClose}
             aria-label="Close trends"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
+            className="hit flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -203,7 +206,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
               key={r.key}
               onClick={() => pickRange(r.key)}
               aria-pressed={r.key === rangeKey}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 ${
+              className={`hit flex-1 rounded-md py-2 text-xs font-medium transition-colors duration-200 ${
                 r.key === rangeKey
                   ? 'bg-green-500 text-neutral-950'
                   : 'text-neutral-300 hover:bg-neutral-800'
@@ -215,9 +218,12 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
         </div>
 
         {habits.length === 0 ? (
-          <p className="mt-6 text-center text-sm text-neutral-500">
-            Add a habit to see your trends.
-          </p>
+          <div className="mt-6 rounded-xl border border-dashed border-neutral-800 px-4 py-8 text-center">
+            <p className="text-sm font-medium text-neutral-300">No trends yet</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Add a habit and check it off for a few days. Close this and tap the green + to start.
+            </p>
+          </div>
         ) : (
           <>
             <div className="mt-4 grid grid-cols-2 gap-2">

@@ -11,6 +11,7 @@ import PomodoroPanel from './PomodoroPanel';
 import { backdropCls, sheetAnimCls } from './ui';
 import { usePresence } from './usePresence';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
 type Mode = 'timer' | 'pomodoro';
@@ -219,6 +220,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
     if ((locked || pomoActive) && !window.confirm('Stop the timer and close?')) return;
     onClose();
   }
+  const dlg = useDialog<HTMLDivElement>('Timer');
   // Esc closes it too (asks first if a timer is running); ignored while the window is already closing.
   useEscape(() => {
     if (!closing) requestClose();
@@ -342,7 +344,8 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -354,7 +357,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
           <button
             onClick={requestClose}
             aria-label="Close timer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
+            className="hit flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -372,7 +375,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
               onClick={() => setMode(key)}
               aria-pressed={mode === key}
               disabled={mode !== key && (phase !== 'idle' || pomoActive)}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
+              className={`hit flex-1 rounded-md py-2 text-xs font-medium transition-colors duration-200 disabled:opacity-40 ${
                 mode === key ? 'bg-green-500 text-neutral-950' : 'text-neutral-300 hover:bg-neutral-800'
               }`}
             >
@@ -453,6 +456,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
                 inputMode="numeric"
                 min={1}
                 value={breakStr}
+                aria-label="Break reminder interval in minutes"
                 disabled={locked || !breakOn}
                 onChange={(e) => setBreakStr(e.target.value)}
                 className={`${inputCls} text-center`}

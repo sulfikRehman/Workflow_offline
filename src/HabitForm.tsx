@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, Trash2 } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { WEEK_ORDER } from '@/lib/stats';
 import { HABIT_COLORS } from '@/lib/colors';
@@ -8,6 +8,7 @@ import { TEMPLATES } from '@/lib/templates';
 import { GOAL_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
 export type HabitFormData = {
@@ -72,7 +73,14 @@ export default function HabitForm({
   const [goalOn, setGoalOn] = useState(!!habit?.goal);
   const [goalText, setGoalText] = useState(String(habit?.goal?.days ?? 100));
   const [error, setError] = useState<string | null>(null);
+  const [more, setMore] = useState(false); // icon, colour and long-term goal stay tucked away until asked for
+  const uid = useId();
+  const nameId = `${uid}-name`;
+  const unitId = `${uid}-unit`;
+  const targetId = `${uid}-target`;
+  const moreId = `${uid}-more`;
   useEscape(onClose);
+  const dlg = useDialog<HTMLFormElement>(editing ? 'Edit habit' : 'New habit');
 
   const target = Number(targetText);
   const targetChanged = editing && Number.isFinite(target) && target !== habit.target_value;
@@ -91,6 +99,7 @@ export default function HabitForm({
     }
     const goal = Number(goalText);
     if (goalOn && (!Number.isInteger(goal) || goal < 1 || goal > GOAL_MAX)) {
+      setMore(true);
       return setError(`The goal must be a whole number of days from 1 to ${GOAL_MAX}.`);
     }
     onSave({
@@ -122,7 +131,8 @@ export default function HabitForm({
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className={`${sheetAnimCls(closing)} max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
+        {...dlg}
+        className={`${sheetAnimCls(closing)} focus:outline-none max-h-[95dvh] w-full max-w-md lg:max-w-lg overflow-y-auto rounded-t-2xl border border-neutral-800 bg-neutral-900 p-5 sm:rounded-2xl`}
       >
         <h2 className="text-base font-semibold text-white">
           {editing ? 'Edit Habit' : 'New Habit'}
@@ -150,7 +160,7 @@ export default function HabitForm({
                         setColor(t.color);
                         setError(null);
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+                      className="hit inline-flex items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white"
                     >
                       <Ico className="h-3.5 w-3.5" style={{ color: t.color }} />
                       {t.name}
@@ -165,8 +175,9 @@ export default function HabitForm({
           )}
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">Name</label>
+            <label htmlFor={nameId} className="mb-1.5 block text-xs font-medium text-neutral-400">Name</label>
             <input
+              id={nameId}
               autoFocus={!editing}
               value={name}
               maxLength={40}
@@ -181,8 +192,9 @@ export default function HabitForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-400">Unit</label>
+              <label htmlFor={unitId} className="mb-1.5 block text-xs font-medium text-neutral-400">Unit</label>
               <input
+                id={unitId}
                 value={unit}
                 maxLength={12}
                 onChange={(e) => setUnit(e.target.value)}
@@ -191,10 +203,11 @@ export default function HabitForm({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-neutral-400">
+              <label htmlFor={targetId} className="mb-1.5 block text-xs font-medium text-neutral-400">
                 Daily Target
               </label>
               <input
+                id={targetId}
                 type="number"
                 inputMode="decimal"
                 step="any"
@@ -214,9 +227,9 @@ export default function HabitForm({
             </p>
           )}
 
-          <div>
+          <div role="group" aria-labelledby={`${uid}-days`}>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="block text-xs font-medium text-neutral-400">Days</label>
+              <span id={`${uid}-days`} className="block text-xs font-medium text-neutral-400">Days</span>
               <span className="flex gap-3">
                 {preset(ALL_DAYS)}
                 {preset([1, 2, 3, 4, 5])}
@@ -248,92 +261,113 @@ export default function HabitForm({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">Icon</label>
-            <div className="grid grid-cols-7 gap-1.5">
-              {ICON_OPTIONS.map((ic) => {
-                const Ico = getHabitIcon(ic);
-                const sel = ic === icon;
-                return (
-                  <button
-                    type="button"
-                    key={ic}
-                    onClick={() => setIcon(ic)}
-                    aria-pressed={sel}
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                      sel
-                        ? 'border-green-500 bg-green-500/15 text-green-400'
-                        : 'border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-white'
-                    }`}
-                  >
-                    <Ico className="h-5 w-5" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-neutral-400">Colour</label>
-            <div className="grid grid-cols-6 gap-2">
-              {HABIT_COLORS.map((c) => {
-                const sel = c.toLowerCase() === color.toLowerCase();
-                return (
-                  <button
-                    type="button"
-                    key={c}
-                    onClick={() => setColor(c)}
-                    aria-pressed={sel}
-                    aria-label={`Colour ${c}`}
-                    className={`flex h-9 items-center justify-center rounded-lg border transition ${
-                      sel ? 'border-white' : 'border-neutral-800 hover:border-neutral-600'
-                    }`}
-                  >
-                    <span
-                      className="h-5 w-5 rounded-full transition-transform duration-200"
-                      style={{ backgroundColor: c, transform: sel ? 'scale(1.2)' : 'scale(1)' }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
-              <input
-                type="checkbox"
-                checked={goalOn}
-                onChange={(e) => setGoalOn(e.target.checked)}
-                className="h-4 w-4 accent-green-500"
-              />
-              Long-term goal
-            </label>
-            <div className={`collapsible${goalOn ? ' open' : ''}`}>
+            <button
+              type="button"
+              onClick={() => setMore((m) => !m)}
+              aria-expanded={more}
+              aria-controls={moreId}
+              className="flex w-full items-center justify-between rounded-lg border border-neutral-800 px-3 py-2.5 text-left text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
+            >
+              <span>
+                More options
+                <span className="ml-1.5 font-normal text-neutral-500">icon, colour, long-term goal</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-neutral-500 transition-transform ${more ? 'rotate-180' : ''}`} />
+            </button>
+            <div id={moreId} className={`collapsible${more ? ' open' : ''}`}>
               <div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="shrink-0 text-xs text-neutral-400">Reach the target on</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={GOAL_MAX}
-                    step={1}
-                    value={goalText}
-                    disabled={!goalOn}
-                    onChange={(e) => {
-                      setGoalText(e.target.value);
-                      setError(null);
-                    }}
-                    aria-label="Goal in days"
-                    className={`${inputCls} text-center`}
-                  />
-                  <span className="shrink-0 text-xs text-neutral-400">days</span>
+                <div className="space-y-4 pt-4">
+                <div role="group" aria-labelledby={`${uid}-icon`}>
+                  <span id={`${uid}-icon`} className="mb-1.5 block text-xs font-medium text-neutral-400">Icon</span>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {ICON_OPTIONS.map((ic) => {
+                      const Ico = getHabitIcon(ic);
+                      const sel = ic === icon;
+                      return (
+                        <button
+                          type="button"
+                          key={ic}
+                          onClick={() => setIcon(ic)}
+                          aria-pressed={sel}
+                          className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+                            sel
+                              ? 'border-green-500 bg-green-500/15 text-green-400'
+                              : 'border-neutral-800 text-neutral-500 hover:border-neutral-700 hover:text-white'
+                          }`}
+                        >
+                          <Ico className="h-5 w-5" />
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
-                  {habit?.goal
-                    ? `Counting days since ${habit.goal.start}. Changing the number keeps that start day.`
-                    : 'Counts the days you reach the daily target, starting from the day you set the goal.'}
-                </p>
+
+                <div role="group" aria-labelledby={`${uid}-colour`}>
+                  <span id={`${uid}-colour`} className="mb-1.5 block text-xs font-medium text-neutral-400">Colour</span>
+                  <div className="grid grid-cols-6 gap-2">
+                    {HABIT_COLORS.map((c) => {
+                      const sel = c.toLowerCase() === color.toLowerCase();
+                      return (
+                        <button
+                          type="button"
+                          key={c}
+                          onClick={() => setColor(c)}
+                          aria-pressed={sel}
+                          aria-label={`Colour ${c}`}
+                          className={`flex h-9 items-center justify-center rounded-lg border transition ${
+                            sel ? 'border-white' : 'border-neutral-800 hover:border-neutral-600'
+                          }`}
+                        >
+                          <span
+                            className="h-5 w-5 rounded-full transition-transform duration-200"
+                            style={{ backgroundColor: c, transform: sel ? 'scale(1.2)' : 'scale(1)' }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={goalOn}
+                      onChange={(e) => setGoalOn(e.target.checked)}
+                      className="h-4 w-4 accent-green-500"
+                    />
+                    Long-term goal
+                  </label>
+                  <div className={`collapsible${goalOn ? ' open' : ''}`}>
+                    <div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="shrink-0 text-xs text-neutral-400">Reach the target on</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={GOAL_MAX}
+                          step={1}
+                          value={goalText}
+                          disabled={!goalOn}
+                          onChange={(e) => {
+                            setGoalText(e.target.value);
+                            setError(null);
+                          }}
+                          aria-label="Goal in days"
+                          className={`${inputCls} text-center`}
+                        />
+                        <span className="shrink-0 text-xs text-neutral-400">days</span>
+                      </div>
+                      <p className="mt-1.5 text-[0.6875rem] text-neutral-500">
+                        {habit?.goal
+                          ? `Counting days since ${habit.goal.start}. Changing the number keeps that start day.`
+                          : 'Counts the days you reach the daily target, starting from the day you set the goal.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                </div>
               </div>
             </div>
           </div>

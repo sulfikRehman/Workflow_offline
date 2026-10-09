@@ -1,3 +1,5 @@
+import Bump from './Bump';
+
 /** "Today" card: a ring that fills as the day's habits get done. */
 export default function TodayRing({ done, total }: { done: number; total: number }) {
   const frac = total > 0 ? Math.min(1, done / total) : 0;
@@ -35,7 +37,7 @@ export default function TodayRing({ done, total }: { done: number; total: number
       <div className="min-w-0">
         <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">Today</p>
         <p className="mt-0.5 text-2xl font-bold tabular-nums text-green-400">
-          {done}/{total}
+          <Bump value={done} />/{total}
         </p>
         <p className="text-[0.6875rem] text-neutral-500">{allDone ? 'all done' : 'completed'}</p>
       </div>
