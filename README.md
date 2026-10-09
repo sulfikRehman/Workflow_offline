@@ -121,3 +121,9 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - **Accessibility:** the Timer break interval input now has an accessible name.
 - Data model, storage and streak logic are unchanged.
 - After adding new colour classes, run `node tools/gen-light-theme.mjs`.
+
+## Offline and updates (1.5.2)
+
+- The service worker (`public/sw.js`) now installs even if one icon is missing, asks the network for fresh copies when installing, and removes built files from older deploys (on install and on every online page load).
+- Page loads wait at most 3 seconds for the network, then show the saved app, so a weak connection does not leave a blank screen.
+- Normal deploys need no manual cache bump. Change `CACHE_VERSION` only if the caching rules change.

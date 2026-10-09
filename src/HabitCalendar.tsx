@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight, Flame, X } from 'lucide-react';
 import { getHabitIcon } from '@/lib/icons';
 import { toISODate, todayISO } from '@/lib/date';
 import {
-  WEEK_ORDER,
   isActiveDay,
   monthSummary,
   monthWeeks,
