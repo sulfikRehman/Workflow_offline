@@ -127,3 +127,10 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - The service worker (`public/sw.js`) now installs even if one icon is missing, asks the network for fresh copies when installing, and removes built files from older deploys (on install and on every online page load).
 - Page loads wait at most 3 seconds for the network, then show the saved app, so a weak connection does not leave a blank screen.
 - Normal deploys need no manual cache bump. Change `CACHE_VERSION` only if the caching rules change.
+
+## New in 1.6 (animation)
+
+- When the app opens, the Today ring sweeps from empty to its value, the numbers count up once (about 0.45 s), and the ring and stat cards rise in one after another.
+- Later changes do not recount: the number pops briefly (`Bump`).
+- Switching between the Timer and Pomodoro tabs fades the new tab in.
+- With reduced motion, the ring and numbers show their final values at once (`CountUp.tsx`, `lib/motion.ts`).

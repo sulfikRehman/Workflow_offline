@@ -26,7 +26,7 @@ import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import TrendsModal from './TrendsModal';
-import Bump from './Bump';
+import CountUp from './CountUp';
 import TodayRing from './TodayRing';
 import WeeklyCard from './WeeklyCard';
 import { claimMilestone, crossedMilestone } from '@/lib/milestones';
@@ -547,13 +547,13 @@ export default function App() {
         <aside className="contents lg:order-2 lg:block lg:sticky lg:top-24">
         {/* Stats row */}
         <section className="order-1 mb-6 grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-2">
-          <div className="col-span-3 lg:col-span-2">
+          <div className="rise-anim col-span-3 lg:col-span-2">
             <TodayRing done={todayCompleted} total={scheduledToday.length} />
           </div>
-          <StatCard label="This Week" value={`${weekCompleted}`} sub={`of ${maxWeekChecks} checks`} />
-          <StatCard label="Best Streak" value={`${topStreak}`} sub="days" />
+          <StatCard label="This Week" value={`${weekCompleted}`} sub={`of ${maxWeekChecks} checks`} delay={60} />
+          <StatCard label="Best Streak" value={`${topStreak}`} sub="days" delay={110} />
           <div className="contents lg:block lg:col-span-2">
-            <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" />
+            <StatCard label="Habits" value={`${activeHabits.length}`} sub="tracking" delay={160} />
           </div>
         </section>
 
@@ -908,15 +908,18 @@ function StatCard({
   value,
   sub,
   accent,
+  delay = 0,
 }: {
   label: string;
   value: string;
   sub: string;
   accent?: boolean;
+  delay?: number;
 }) {
   return (
     <div
-      className={`rounded-2xl border p-3 sm:p-4 ${
+      style={{ '--d': `${delay}ms` } as CSSProperties}
+      className={`rise-anim rounded-2xl border p-3 sm:p-4 ${
         accent ? 'border-green-500/30 bg-green-500/10' : 'border-neutral-800/60 bg-neutral-900/40'
       }`}
     >
@@ -924,7 +927,7 @@ function StatCard({
       <p
         className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
       >
-        <Bump value={value} />
+        {/^\d+$/.test(value) ? <CountUp value={Number(value)} /> : value}
       </p>
       <p className="text-[0.6875rem] text-neutral-500">{sub}</p>
     </div>

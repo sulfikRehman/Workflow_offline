@@ -385,7 +385,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
         </div>
 
         {mode === 'timer' ? (
-          <>
+          <div key="pane-timer" className="fade-anim">
           <div className="mt-4">
             <TimerDial
               duration={duration}
@@ -516,12 +516,12 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             Keep this screen open: the app keeps the display awake while the timer runs, but
             beeps may not play if the phone is locked or the app is in the background.
           </p>
-          </>
+          </div>
         ) : (
-          <>
+          <div key="pane-pomodoro" className="fade-anim">
             <PomodoroPanel onActiveChange={setPomoActive} onStopped={pomodoroStopped} />
             {banners}
-          </>
+          </div>
         )}
       </div>
     </div>
