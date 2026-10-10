@@ -479,7 +479,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             )}
           </div>
   
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {phase === 'running' ? (
               <button
                 onClick={pause}

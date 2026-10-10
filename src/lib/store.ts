@@ -188,9 +188,46 @@ function validate(data: unknown): DB {
 }
 
 let cache: DB | null = null;
+let lastRaw: string | null = null; // what this tab last read or wrote, to notice another tab's changes
+const listeners = new Set<() => void>();
+
+/** Calls `cb` when another tab or window changed the saved data. Returns a way to stop listening. */
+export function onExternalChange(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+/** Drops the in-memory copy if the saved data differs from what this tab knows, then tells the screen. */
+function resync(): void {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(KEY);
+  } catch {
+    return;
+  }
+  if (raw === lastRaw) return;
+  cache = null;
+  lastRaw = raw;
+  load();
+  listeners.forEach((f) => f());
+}
+
+if (typeof window !== 'undefined') {
+  // Another tab saved something: pick it up, so the next save here cannot overwrite it.
+  window.addEventListener('storage', (e) => {
+    if (e.key === KEY || e.key === null) resync();
+  });
+  // A tab that was asleep in the background may have missed that event.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resync();
+  });
+  window.addEventListener('pageshow', resync);
+}
 
 function write(db: DB): void {
-  localStorage.setItem(KEY, JSON.stringify(db));
+  const raw = JSON.stringify(db);
+  localStorage.setItem(KEY, raw);
+  lastRaw = raw;
 }
 
 function load(): DB {
@@ -201,6 +238,7 @@ function load(): DB {
   } catch {
     /* storage blocked: start with sample data for this session */
   }
+  lastRaw = raw;
   if (!raw) {
     const db = seed();
     try {

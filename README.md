@@ -134,3 +134,10 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - Later changes do not recount: the number pops briefly (`Bump`).
 - Switching between the Timer and Pomodoro tabs fades the new tab in.
 - With reduced motion, the ring and numbers show their final values at once (`CountUp.tsx`, `lib/motion.ts`).
+
+## Fixes in 1.6.1
+
+- **Two tabs / home-screen app plus browser tab:** a save in one no longer overwrites what the other saved. Each tab now picks up the other's changes (`onExternalChange` in `lib/store.ts`), also when it returns to the screen.
+- **App left open past midnight:** the week view moves to the new week and streaks recompute (`useDayKey.ts`).
+- **Very large text or zoom (200%):** the Trends/Reorder row and the Start/Reset rows wrap instead of running off the screen.
+- Known limit: the phone Back button leaves the app instead of closing an open window.

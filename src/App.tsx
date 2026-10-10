@@ -27,6 +27,7 @@ import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
 import TrendsModal from './TrendsModal';
 import CountUp from './CountUp';
+import useDayKey from './useDayKey';
 import TodayRing from './TodayRing';
 import WeeklyCard from './WeeklyCard';
 import { claimMilestone, crossedMilestone } from '@/lib/milestones';
@@ -74,6 +75,7 @@ export default function App() {
   const [notes, setNotes] = useState<HabitNote[]>(() => store.getNotes());
   const [skips, setSkips] = useState<HabitSkip[]>(() => store.getSkips());
   const [weekRef, setWeekRef] = useState<Date>(new Date());
+  const dayKey = useDayKey(); // changes at midnight, so "today" and streaks never go stale
   const [weekDir, setWeekDir] = useState(0);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -130,17 +132,39 @@ export default function App() {
   // Current and best streak for each habit (scheduled days only)
   const streaks = useMemo(() => {
     const out: Record<string, { current: number; best: number }> = {};
+    const today = parseISODate(dayKey);
     for (const h of activeHabits) {
       const valueOn = (iso: string) => entryMap[h.id]?.[iso] ?? 0;
       const skipFn = (iso: string) => !!skipMap[h.id]?.[iso];
       const dates = Object.keys(entryMap[h.id] ?? {}).sort();
       out[h.id] = {
-        current: currentStreak(h, valueOn, new Date(), skipFn),
-        best: dates.length ? bestStreak(h, valueOn, parseISODate(dates[0]), new Date(), skipFn) : 0,
+        current: currentStreak(h, valueOn, today, skipFn),
+        best: dates.length ? bestStreak(h, valueOn, parseISODate(dates[0]), today, skipFn) : 0,
       };
     }
     return out;
-  }, [activeHabits, entryMap, skipMap]);
+  }, [activeHabits, entryMap, skipMap, dayKey]);
+
+  // Another tab or window saved something: show it here too, instead of overwriting it later.
+  useEffect(
+    () =>
+      store.onExternalChange(() => {
+        setHabits(store.getHabits());
+        setEntries(store.getEntries());
+        setNotes(store.getNotes());
+        setSkips(store.getSkips());
+      }),
+    []
+  );
+
+  // After midnight, a week view that was showing "this week" moves on to the new week.
+  const lastDay = useRef(dayKey);
+  useEffect(() => {
+    const before = lastDay.current;
+    if (before === dayKey) return;
+    lastDay.current = dayKey;
+    setWeekRef((w) => (getWeekDays(w).some((d) => toISODate(d) === before) ? new Date() : w));
+  }, [dayKey]);
 
   // A small "well done" the first time a habit's streak reaches 7, 30 or 100 days.
   const lastStreaks = useRef<Record<string, number> | null>(null);
@@ -669,7 +693,7 @@ export default function App() {
         )}
 
         {/* Trends and reorder */}
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <button
             onClick={() => setTrendsOpen(true)}
             className="hit inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-700 hover:text-white"
