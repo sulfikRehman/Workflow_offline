@@ -3,7 +3,7 @@ export type ThemePref = 'dark' | 'light' | 'auto';
 export const THEME_PREFS: ThemePref[] = ['dark', 'light', 'auto'];
 
 const KEY = 'habitflow:theme';
-const META_COLOR = { dark: '#0a0a0a', light: '#f5f5f5' };
+const META_COLOR = { dark: '#0a0a0a', light: '#fcfbf4' };
 
 function isPref(v: unknown): v is ThemePref {
   return v === 'dark' || v === 'light' || v === 'auto';

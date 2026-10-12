@@ -141,3 +141,9 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - **App left open past midnight:** the week view moves to the new week and streaks recompute (`useDayKey.ts`).
 - **Very large text or zoom (200%):** the Trends/Reorder row and the Start/Reset rows wrap instead of running off the screen.
 - Known limit: the phone Back button leaves the app instead of closing an open window.
+
+## New in 1.7 (light theme)
+
+- Light mode now uses three colours: cream `#FCFBF4` (page, cards, windows), tea green `#D0F0C0` (the Today card, done days, soft highlights) and black (text, main buttons, selected tabs).
+- Dark mode is unchanged. Data, storage and streaks are untouched.
+- Colours live in `tools/gen-light-theme.mjs`; run `node tools/gen-light-theme.mjs` after adding colour classes, and it rewrites `src/light-theme.css`.
