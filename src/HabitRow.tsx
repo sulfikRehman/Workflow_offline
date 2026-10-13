@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -42,11 +42,19 @@ type Props = {
   isSkipped: (iso: string) => boolean;
   /** Which way the week just changed: -1 earlier, 1 later, 0 not at all (sets the slide direction). */
   slide: number;
+  /**
+   * The data this card depends on besides the props above. The card is memoized (see the bottom of
+   * the file), and the function props are recreated on every App render, so these are what tell it
+   * that a note, a rest day or the date changed.
+   */
+  notes: Record<string, string>;
+  rests: Record<string, true>;
+  dayKey: string;
   /** Present while the list is being reordered. */
   reorder?: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void };
 };
 
-export default function HabitRow({
+function HabitRow({
   habit,
   weekDays,
   valueOn,
@@ -268,3 +276,30 @@ export default function HabitRow({
     </div>
   );
 }
+
+/**
+ * The page re-renders for many reasons that do not touch a card (opening a window, a banner, the
+ * timer). Cards skip those. A card re-renders when its own data, the week, the date, the slide
+ * direction or its reorder buttons change. The function props are deliberately not compared: they
+ * only read the card's own habit and the data compared here, and a fresh copy arrives with every
+ * change that matters.
+ */
+function sameRow(a: Props, b: Props): boolean {
+  const ra = a.reorder;
+  const rb = b.reorder;
+  return (
+    a.habit === b.habit &&
+    a.weekDays === b.weekDays &&
+    a.allValues === b.allValues &&
+    a.notes === b.notes &&
+    a.rests === b.rests &&
+    a.dayKey === b.dayKey &&
+    a.slide === b.slide &&
+    a.streak.current === b.streak.current &&
+    a.streak.best === b.streak.best &&
+    !!ra === !!rb &&
+    (!ra || !rb || (ra.canUp === rb.canUp && ra.canDown === rb.canDown))
+  );
+}
+
+export default memo(HabitRow, sameRow);

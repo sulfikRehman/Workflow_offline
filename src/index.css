@@ -158,15 +158,15 @@ button:not(:disabled):active {
 }
 
 /* Something that grows open when it appears and folds shut when it goes (banners, offers) */
-.collapse {
+.unfold {
   display: grid;
   animation: collapse-in 260ms var(--ease-out) both;
 }
-.collapse.closing {
+.unfold.closing {
   animation: collapse-out 200ms var(--ease-exit) both;
   pointer-events: none;
 }
-.collapse > div {
+.unfold > div {
   min-height: 0;
   overflow: hidden;
 }

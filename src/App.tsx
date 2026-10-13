@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CSSProperties } from 'react';
 import * as store from '@/lib/store';
 import type { Habit, HabitEntry, HabitNote, HabitSkip } from '@/lib/store';
@@ -25,6 +25,7 @@ import type { HabitFormData } from './HabitForm';
 import HabitRow from './HabitRow';
 import MoreMenu from './MoreMenu';
 import TimerModal from './TimerModal';
+import { useLeaving } from './useLeaving';
 import TrendsModal from './TrendsModal';
 import CountUp from './CountUp';
 import useDayKey from './useDayKey';
@@ -49,6 +50,9 @@ import {
 
 type EntryMap = Record<string, Record<string, number>>;
 const NO_VALUES: Record<string, number> = {};
+const NO_NOTES: Record<string, string> = {};
+const NO_RESTS: Record<string, true> = {};
+const NO_STREAK = { current: 0, best: 0 };
 
 function csvEscape(s: string): string {
   if (/[",\n]/.test(s)) {
@@ -93,6 +97,8 @@ export default function App() {
 
   const weekDays = useMemo(() => getWeekDays(weekRef), [weekRef]);
   const activeHabits = useMemo(() => habits.filter((h) => !h.archived), [habits]);
+  const rowSlots = useLeaving(activeHabits.map((h) => h.id));
+  const lastRows = useRef(new Map<string, ReactNode>());
   const archivedHabits = useMemo(() => habits.filter((h) => h.archived), [habits]);
 
   // All entries, keyed habit -> date -> value (used for the week grid, streaks and the calendar)
@@ -624,7 +630,7 @@ export default function App() {
         </div>
 
         {noticeP.item && (
-          <div className={`collapse${noticeP.closing ? ' closing' : ''}`}>
+          <div className={`unfold${noticeP.closing ? ' closing' : ''}`}>
             <div>
               <div
                 role="status"
@@ -643,7 +649,7 @@ export default function App() {
         )}
 
         {errorP.item && (
-          <div className={`collapse${errorP.closing ? ' closing' : ''}`}>
+          <div className={`unfold${errorP.closing ? ' closing' : ''}`}>
             <div>
               <div
                 role="alert"
@@ -662,7 +668,7 @@ export default function App() {
         )}
 
         {nudgeP.item && (
-          <div className={`collapse${nudgeP.closing ? ' closing' : ''}`}>
+          <div className={`unfold${nudgeP.closing ? ' closing' : ''}`}>
             <div>
               <div
                 role="status"
@@ -742,18 +748,27 @@ export default function App() {
               Tap a day to mark it done · hold a day, or tap today&apos;s total, to enter an amount
             </p>
             <div className="space-y-3 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
-              {activeHabits.map((habit, i) => (
-                <div
-                  key={habit.id}
-                  className="rise-anim"
-                  style={{ '--d': `${Math.min(i, 6) * 45}ms` } as CSSProperties}
-                >
+              {rowSlots.map((slot) => {
+                if (slot.leaving) {
+                  // Archived or deleted a moment ago: the last picture of the card folds away.
+                  return (
+                    <div key={slot.id} className="unfold closing">
+                      <div>{lastRows.current.get(slot.id)}</div>
+                    </div>
+                  );
+                }
+                const i = activeHabits.findIndex((h) => h.id === slot.id);
+                const habit = activeHabits[i];
+                const card = (
                   <HabitRow
                     habit={habit}
                     weekDays={weekDays}
                     valueOn={valueOnFor(habit.id)}
                     allValues={entryMap[habit.id] ?? NO_VALUES}
-                    streak={streaks[habit.id] ?? { current: 0, best: 0 }}
+                    streak={streaks[habit.id] ?? NO_STREAK}
+                    notes={noteMap[habit.id] ?? NO_NOTES}
+                    rests={skipMap[habit.id] ?? NO_RESTS}
+                    dayKey={dayKey}
                     onToggle={(date) => toggleComplete(habit, date)}
                     onAmount={(date) => openAmount(habit, date)}
                     onEdit={() => setEditingId(habit.id)}
@@ -772,8 +787,18 @@ export default function App() {
                         : undefined
                     }
                   />
-                </div>
-              ))}
+                );
+                lastRows.current.set(habit.id, card);
+                return (
+                  <div
+                    key={habit.id}
+                    className="rise-anim"
+                    style={{ '--d': `${Math.min(i, 6) * 45}ms` } as CSSProperties}
+                  >
+                    {card}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

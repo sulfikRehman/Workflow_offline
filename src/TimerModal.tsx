@@ -261,7 +261,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
   const banners = (
     <>
           {alarmP.item && (
-            <div className={`collapse${alarmP.closing ? ' closing' : ''}`}>
+            <div className={`unfold${alarmP.closing ? ' closing' : ''}`}>
               <div>
                 <div
                   role="alert"
@@ -283,7 +283,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
           )}
   
           {offerP.item !== null && logTarget && (
-            <div className={`collapse${offerP.closing ? ' closing' : ''}`}>
+            <div className={`unfold${offerP.closing ? ' closing' : ''}`}>
               <div>
                 <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3">
                   <p className="text-sm font-medium text-white">
@@ -323,7 +323,7 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
             </div>
           )}
           {loggedP.item && (
-            <div className={`collapse${loggedP.closing ? ' closing' : ''}`}>
+            <div className={`unfold${loggedP.closing ? ' closing' : ''}`}>
               <div>
                 <p
                   role="status"

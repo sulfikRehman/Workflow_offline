@@ -147,3 +147,9 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - Light mode now uses three colours: cream `#FCFBF4` (page, cards, windows), tea green `#D0F0C0` (the Today card, done days, soft highlights) and black (text, main buttons, selected tabs).
 - Dark mode is unchanged. Data, storage and streaks are untouched.
 - Colours live in `tools/gen-light-theme.mjs`; run `node tools/gen-light-theme.mjs` after adding colour classes, and it rewrites `src/light-theme.css`.
+
+## New in 1.7.1 (smoother lists)
+
+- **Archiving or deleting a habit:** its card now folds shut over about 0.24 s instead of vanishing, in step with the window closing (`useLeaving.ts`). With reduced motion it leaves at once. Restoring during the fold works.
+- **Habit cards skip re-drawing** when something that does not affect them changes (opening a window, a banner, the timer). A card still redraws when its own data, the week, a note, a rest day, the order or the date changes (`HabitRow.tsx`, `sameRow`). Measured with 10 habits and 4,000 entries at 4x slower CPU: about 46 ms of script work per window open and close, against about 70 ms without it (median of 12 runs, noisy).
+- **Fix:** the banner animation class was renamed from `collapse` to `unfold`. `collapse` is also a Tailwind class that hides things (`visibility: collapse`), and it could hide banners such as the timer's Stop button depending on how the build scanned the code.
