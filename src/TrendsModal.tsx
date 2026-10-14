@@ -119,6 +119,7 @@ function Chart({
               <rect x={cx - barW / 2} y={y(0) - 2} width={barW} height={2} rx={1} className="fill-neutral-700" />
             ) : (
               <rect
+                className={isSel ? 'hf-bar hf-bar-sel' : 'hf-bar'}
                 x={cx - barW / 2}
                 y={y(b.pct)}
                 width={barW}

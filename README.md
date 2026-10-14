@@ -161,3 +161,9 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - Dark mode is unchanged (checked pixel for pixel against 1.7.1 on the main page, calendar, timer, trends and new-habit windows). Features, data and streaks are untouched.
 - Where it lives: colours in `tools/gen-light-theme.mjs` (run `node tools/gen-light-theme.mjs` after adding colour classes), shapes, shadows and special cards in `src/light-design.css`. Every rule there starts with `html[data-theme='light']`.
 - The faintest greys were darkened slightly and the fade on finished habits reduced, so small labels stay readable. Days that are not scheduled, future calendar days and disabled buttons are faded on purpose.
+
+## Fixes in 1.8.1 (light mode colours)
+
+- The Trends chart bars, the timer and Pomodoro dials (arc, handle, progress dots), the haptic feedback switch and the checkboxes were still the old bright green in light mode. They now use the forest green; the selected bar and the main buttons use the deepest forest.
+- Habit colours (progress bars, done days and circles) keep their hue but are deepened in light mode so they sit well beside the forest green.
+- Dark mode is unchanged.

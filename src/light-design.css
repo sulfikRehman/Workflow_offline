@@ -112,3 +112,14 @@ html[data-theme='light'] .hf-card.done-today:has(:focus-visible) { opacity: 1; }
 @media (hover: hover) and (pointer: fine) {
   html[data-theme='light'] .hf-card.done-today:hover { opacity: 1; }
 }
+
+/* ---------- Trends chart bars: forest green (the selected day is the deepest) ---------- */
+html[data-theme='light'] .hf-bar { fill: #5b8a6b; }
+html[data-theme='light'] .hf-bar-sel { fill: #26402f; }
+
+/* ---------- Habit colours: same hue, deeper, so they sit well next to the forest green ---------- */
+html[data-theme='light'] .fill,
+html[data-theme='light'] .hf-dot:not([style*='transparent']),
+html[data-theme='light'] [role='grid'] button > span:not([style*='transparent']) {
+  filter: saturate(0.72) brightness(0.8);
+}

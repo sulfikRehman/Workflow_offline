@@ -62,10 +62,10 @@ html[data-theme='light'] .bg-green-500\/10, html[data-theme='light'] .bg-green-5
 html[data-theme='light'] .bg-green-500\/30 { background-color: #cddcc0; }
 html[data-theme='light'] .border-green-500\/30, html[data-theme='light'] .border-green-500\/40 { border-color: #b7cba8; }
 html[data-theme='light'] .ring-green-500\/30 { --tw-ring-color: #b7cba8; }
-/* Green marks and fills that are not buttons: a leaf green that stays visible on cream. */
-html[data-theme='light'] .bg-green-500 { background-color: #3e9a4a; }
-html[data-theme='light'] .border-green-500, html[data-theme='light'] .border-green-400, html[data-theme='light'] .focus\:border-green-500:focus { border-color: #3e9a4a; }
-html[data-theme='light'] .stroke-green-500, html[data-theme='light'] .stroke-green-400 { stroke: #3e9a4a; }
-html[data-theme='light'] .accent-green-500 { accent-color: #3e9a4a; }
-html[data-theme='light'] .ring-green-500 { --tw-ring-color: #3e9a4a; }
+/* Green marks and fills that are not buttons (toggles, rings, dots, focus lines): forest green. */
+html[data-theme='light'] .bg-green-500 { background-color: #2f5d41; }
+html[data-theme='light'] .border-green-500, html[data-theme='light'] .border-green-400, html[data-theme='light'] .focus\:border-green-500:focus { border-color: #2f5d41; }
+html[data-theme='light'] .stroke-green-500, html[data-theme='light'] .stroke-green-400 { stroke: #2f5d41; }
+html[data-theme='light'] .accent-green-500 { accent-color: #2f5d41; }
+html[data-theme='light'] .ring-green-500 { --tw-ring-color: #2f5d41; }
 
