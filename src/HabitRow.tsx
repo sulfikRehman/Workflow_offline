@@ -89,7 +89,7 @@ function HabitRow({
   return (
     <div
       data-done-today={doneToday ? 'true' : undefined}
-      className={`habit-card rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70${
+      className={`habit-card hf-card rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4 transition hover:border-neutral-700/70${
         doneToday ? ' done-today' : ''
       }`}
     >
@@ -195,7 +195,7 @@ function HabitRow({
               key={iso}
               onTap={() => onToggle(iso)}
               onLong={() => onAmount(iso)}
-              className={`flex flex-col items-center gap-1 rounded-lg border py-2 transition ${
+              className={`hf-day${today ? ' hf-day-today' : ''} flex flex-col items-center gap-1 rounded-lg border py-2 transition ${
                 today ? 'border-green-500/40' : 'border-neutral-800/50 hover:border-neutral-700'
               } ${done ? 'bg-green-500/15' : 'bg-neutral-900/30'} ${scheduled && !rest ? '' : 'opacity-50'}`}
               title={`${round2(val)} / ${round2(habit.target_value)} ${habit.unit}${
@@ -211,7 +211,7 @@ function HabitRow({
                 {dayLabel(d)}
               </span>
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-md text-[0.625rem] transition-colors duration-200 ${
+                className={`hf-dot flex h-6 w-6 items-center justify-center rounded-md text-[0.625rem] transition-colors duration-200 ${
                   done ? 'text-neutral-950' : partial ? 'text-white' : 'text-neutral-600'
                 }`}
                 style={{

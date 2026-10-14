@@ -15,12 +15,12 @@ export default function WeeklyCard({ summary, nameOf }: Props) {
   return (
     <section
       aria-label="Weekly summary"
-      className="mb-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4"
+      className="hf-stat mb-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4"
     >
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">Weekly summary</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-white">
+          <p className="hf-serif mt-1 text-2xl font-bold tabular-nums text-white">
             {thisWeek.pct}%
             <span className="ml-2 text-xs font-medium text-neutral-500">
               {thisWeek.done} of {thisWeek.scheduled} so far

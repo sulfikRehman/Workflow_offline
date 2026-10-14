@@ -17,7 +17,7 @@ export default function TodayRing({ done, total }: { done: number; total: number
   const C = 2 * Math.PI * R;
   const allDone = total > 0 && done >= total;
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
+    <div className="hf-today flex items-center gap-4 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
       <div
         className="relative h-[4.5rem] w-[4.5rem] shrink-0"
         role="img"
@@ -46,7 +46,7 @@ export default function TodayRing({ done, total }: { done: number; total: number
       </div>
       <div className="min-w-0">
         <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">Today</p>
-        <p className="mt-0.5 text-2xl font-bold tabular-nums text-green-400">
+        <p className="hf-serif mt-0.5 text-2xl font-bold tabular-nums text-green-400">
           <CountUp value={done} />/{total}
         </p>
         <p className="text-[0.6875rem] text-neutral-500">{allDone ? 'all done' : 'completed'}</p>

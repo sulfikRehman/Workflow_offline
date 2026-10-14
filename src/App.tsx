@@ -527,7 +527,7 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <img src="/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
             <div className="hidden sm:block">
-              <h1 className="text-base font-semibold tracking-tight text-white">HabitFlow</h1>
+              <h1 className="hf-serif text-base font-semibold tracking-tight text-white">HabitFlow</h1>
               <p className="text-[0.6875rem] text-neutral-500">Track your daily routines</p>
             </div>
           </div>
@@ -968,13 +968,13 @@ function StatCard({
   return (
     <div
       style={{ '--d': `${delay}ms` } as CSSProperties}
-      className={`rise-anim rounded-2xl border p-3 sm:p-4 ${
+      className={`hf-stat rise-anim rounded-2xl border p-3 sm:p-4 ${
         accent ? 'border-green-500/30 bg-green-500/10' : 'border-neutral-800/60 bg-neutral-900/40'
       }`}
     >
       <p className="text-[0.6875rem] uppercase tracking-wider text-neutral-500">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
+        className={`hf-serif mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-green-400' : 'text-white'}`}
       >
         {/^\d+$/.test(value) ? <CountUp value={Number(value)} /> : value}
       </p>

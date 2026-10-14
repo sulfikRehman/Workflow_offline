@@ -7,6 +7,7 @@ import { noteFirstSeen } from '@/lib/backupNudge';
 import { applyTheme, watchSystemTheme } from '@/lib/theme';
 import './index.css';
 import './light-theme.css';
+import './light-design.css';
 
 applyTheme();
 watchSystemTheme();
