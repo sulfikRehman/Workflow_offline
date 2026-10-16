@@ -1,9 +1,10 @@
 import { Flame, X } from 'lucide-react';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.8.1';
+export const APP_VERSION = '1.9.0';
 
 type Props = {
   habitCount: number;
@@ -27,6 +28,7 @@ const TIPS: [string, string][] = [
 
 export default function AboutModal({ habitCount, checkIns, noteCount, onClose, closing }: Props) {
   useEscape(onClose);
+  useBackClose(!closing, onClose);
   const dlg = useDialog<HTMLDivElement>('About HabitFlow');
   return (
     <div className={backdropCls(closing)} onClick={onClose}>

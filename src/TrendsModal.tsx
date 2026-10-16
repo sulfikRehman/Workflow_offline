@@ -5,6 +5,7 @@ import { completionBuckets, overallPct, parseISODate } from '@/lib/stats';
 import type { Bucket, ChartHabit } from '@/lib/stats';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
@@ -153,6 +154,7 @@ export default function TrendsModal({ habits, valueOn, skippedOn, onClose, closi
   const range = RANGES.find((r) => r.key === rangeKey)!;
   const [selected, setSelected] = useState(RANGES[0].count - 1);
   useEscape(onClose);
+  useBackClose(!closing, onClose);
   const dlg = useDialog<HTMLDivElement>('Trends');
 
   function pickRange(key: RangeKey) {

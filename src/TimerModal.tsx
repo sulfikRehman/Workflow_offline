@@ -11,6 +11,7 @@ import PomodoroPanel from './PomodoroPanel';
 import { backdropCls, sheetAnimCls } from './ui';
 import { usePresence } from './usePresence';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 
 type Phase = 'idle' | 'running' | 'paused' | 'finished';
@@ -216,15 +217,19 @@ export default function TimerModal({ habits, onLogTime, onClose, closing }: Prop
     }
   }
 
-  function requestClose() {
-    if ((locked || pomoActive) && !window.confirm('Stop the timer and close?')) return;
+  /** Closes the window (asks first if a timer is running). Returns false if it stayed open. */
+  function requestClose(): boolean {
+    if ((locked || pomoActive) && !window.confirm('Stop the timer and close?')) return false;
     onClose();
+    return true;
   }
   const dlg = useDialog<HTMLDivElement>('Timer');
   // Esc closes it too (asks first if a timer is running); ignored while the window is already closing.
   useEscape(() => {
     if (!closing) requestClose();
   });
+  // The phone's Back button does the same as the X button.
+  useBackClose(!closing, requestClose);
 
   /** A Pomodoro was stopped: offer to add its focus minutes to a habit. */
   function pomodoroStopped(minutes: number) {

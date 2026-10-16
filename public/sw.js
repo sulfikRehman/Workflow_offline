@@ -3,7 +3,14 @@
 // the page is fetched from the network first, and old built files are cleaned up on install.
 const CACHE_VERSION = 'habitflow-v3';
 const CACHE = CACHE_VERSION;
-const CORE = ['/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.png'];
+const CORE = [
+  '/manifest.webmanifest',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+  '/favicon.png',
+  '/fonts/fraunces-latin-600-normal.woff2', // the light-mode serif, so it also works offline
+];
 const NAV_TIMEOUT_MS = 3000; // on a bad connection, show the saved app instead of waiting forever
 
 self.addEventListener('install', (event) => {

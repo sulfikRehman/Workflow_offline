@@ -15,6 +15,7 @@ import type { Habit } from '@/lib/store';
 import LongPressButton from './LongPressButton';
 import YearHeatmap from './YearHeatmap';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
@@ -53,6 +54,7 @@ export default function HabitCalendar({
   const [mode, setMode] = useState<'month' | 'year'>('month');
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
+  useBackClose(!closing, onClose);
   const dlg = useDialog<HTMLDivElement>(`Calendar for ${habit.name}`);
 
   const today = todayISO();

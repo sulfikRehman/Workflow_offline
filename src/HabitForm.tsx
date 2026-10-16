@@ -8,6 +8,7 @@ import { TEMPLATES } from '@/lib/templates';
 import { GOAL_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
@@ -80,6 +81,7 @@ export default function HabitForm({
   const targetId = `${uid}-target`;
   const moreId = `${uid}-more`;
   useEscape(onClose);
+  useBackClose(!closing, onClose);
   const dlg = useDialog<HTMLFormElement>(editing ? 'Edit habit' : 'New habit');
 
   const target = Number(targetText);

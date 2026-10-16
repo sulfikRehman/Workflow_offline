@@ -7,6 +7,7 @@ import { NOTE_MAX } from '@/lib/store';
 import type { Habit } from '@/lib/store';
 import { useId } from 'react';
 import { useEscape } from './useEscape';
+import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
@@ -53,6 +54,7 @@ export default function AmountModal({
   const [error, setError] = useState<string | null>(null);
   const Icon = getHabitIcon(habit.icon);
   useEscape(onClose);
+  useBackClose(!closing, onClose);
   const dlg = useDialog<HTMLFormElement>(`Amount for ${habit.name}`);
   const uid = useId();
 

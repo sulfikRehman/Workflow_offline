@@ -12,6 +12,7 @@ import type { HapticLevel } from '@/lib/haptics';
 import { THEME_PREFS, getThemePref, setThemePref } from '@/lib/theme';
 import type { ThemePref } from '@/lib/theme';
 import { usePresence } from './usePresence';
+import { useBackClose } from './useBackClose';
 
 type Props = {
   onSaveBackup: () => void;
@@ -49,6 +50,8 @@ export default function MoreMenu({
   const [level, setLevel] = useState<HapticLevel>(getHapticLevel);
   const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const rootRef = useRef<HTMLDivElement>(null);
+  // The phone's Back button closes the menu first.
+  useBackClose(open, () => setOpen(false));
 
   // Close when you tap outside the menu or press Escape.
   useEffect(() => {

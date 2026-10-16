@@ -19,8 +19,8 @@ const INK = [27, 43, 34]; // what "white" text becomes (green-black ink, #1B2B22
 // Accent text that is pale on dark needs to be deeper on light.
 const ACCENT = {
   green: { 100: '#1b5a28', 200: '#1b5a28', 300: '#1f6b2e', 400: '#1f6b2e', 500: '#1f6b2e' },
-  amber: { 100: '#78350f', 200: '#92400e', 300: '#b45309', 400: '#b45309', 500: '#b45309' },
-  red: { 100: '#7f1d1d', 200: '#991b1b', 300: '#b91c1c', 400: '#dc2626', 500: '#dc2626' },
+  amber: { 100: '#78350f', 200: '#92400e', 300: '#a04a08', 400: '#a04a08', 500: '#a04a08' },
+  red: { 100: '#7f1d1d', 200: '#991b1b', 300: '#b91c1c', 400: '#c0211f', 500: '#c0211f' },
   sky: { 300: '#0369a1', 400: '#0284c7', 500: '#0284c7' },
 };
 const VARIANT = {

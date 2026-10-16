@@ -72,7 +72,7 @@ export default function YearHeatmap({ habit, valueOn, isSkipped }: Props) {
         {grid.columns.map((col, ci) => {
           const month = grid.months.find((m) => m.col === ci);
           return [
-            <span key={`m${ci}`} className="relative">
+            <span key={`m${ci}`} className="relative h-3">
               {month && (
                 <span className="absolute left-0 top-0 whitespace-nowrap text-[0.5625rem] leading-none text-neutral-500">
                   {month.label}
@@ -90,7 +90,7 @@ export default function YearHeatmap({ habit, valueOn, isSkipped }: Props) {
                   key={c.iso}
                   data-iso={c.iso}
                   data-level={level}
-                  className={`aspect-square rounded-[2px] ${color ? '' : 'bg-neutral-800'} ${
+                  className={`aspect-square rounded-[2px] ${color ? 'hf-heat' : 'bg-neutral-800'} ${
                     c.future ? 'opacity-30' : !scheduled && level === 0 ? 'opacity-40' : ''
                   }`}
                   style={{
@@ -139,7 +139,7 @@ export default function YearHeatmap({ habit, valueOn, isSkipped }: Props) {
           {([1, 2, 3] as const).map((l) => (
             <span
               key={l}
-              className="h-2.5 w-2.5 rounded-[2px]"
+              className="hf-heat h-2.5 w-2.5 rounded-[2px]"
               style={{ backgroundColor: heatColor(habit.color, l) }}
             />
           ))}
