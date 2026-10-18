@@ -1,6 +1,6 @@
 // Local-first storage: all data lives on this device (localStorage). No server, no account.
 import { todayISO } from './date.ts';
-import { isHexColor } from './colors.ts';
+import { HABIT_COLORS, isHexColor } from './colors.ts';
 
 export type Habit = {
   id: string;
@@ -460,8 +460,155 @@ export function exportBackup(): string {
   );
 }
 
+// ---------- Restoring a backup safely ----------
+// A backup file is checked completely BEFORE anything on the device is touched. A file that fails any
+// check is refused with a plain reason and the current data stays exactly as it was. (Loading the data
+// already on the device keeps using the looser `validate` above, so these stricter rules can never make
+// existing data "unreadable".)
+
+/** A backup file was refused. The message is written for the person using the app. */
+export class BackupError extends Error {}
+
+/** Bigger files than this are not HabitFlow backups (a year of heavy use is well under 1 MB). */
+export const BACKUP_MAX_BYTES = 20 * 1024 * 1024;
+
+export type BackupInfo = {
+  habits: number;
+  entries: number;
+  notes: number;
+  skips: number;
+  /** When the backup was saved (ISO text), or null if the file does not say. */
+  exportedAt: string | null;
+};
+
+function bad(why: string): never {
+  throw new BackupError(why);
+}
+
+/** A real calendar day (no 2026-02-30) in a believable year. */
+function isRealDate(s: string): boolean {
+  if (!DATE_RE.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  if (y < 2000 || y > 2100) return false;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+
+function checkBackup(json: string): { db: DB; info: BackupInfo } {
+  if (!json.trim()) return bad('The file is empty.');
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return bad('The file cannot be read. It may be damaged, cut off, or not a backup at all.');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return bad('This does not look like a HabitFlow backup.');
+  }
+  const top = data as Record<string, unknown>;
+  if (top.app !== undefined && top.app !== 'habitflow') return bad('This backup was made by a different app.');
+  if (top.version !== undefined) {
+    if (typeof top.version !== 'number' || !Number.isFinite(top.version) || top.version < 1) {
+      return bad('This backup has an unknown version.');
+    }
+    if (top.version > 1) {
+      return bad('This backup comes from a newer version of HabitFlow. Update the app first, then try again.');
+    }
+  }
+  if (!Array.isArray(top.habits) || !Array.isArray(top.entries)) {
+    return bad('This does not look like a HabitFlow backup (it has no habits or history).');
+  }
+  let db: DB;
+  try {
+    db = validate(data);
+  } catch {
+    return bad('Some habits or history in this file are damaged or do not match each other.');
+  }
+  if (db.habits.length === 0) return bad('The backup contains no habits.');
+
+  const habitIds = new Set<string>();
+  for (const h of db.habits) {
+    if (habitIds.has(h.id)) return bad('Two habits in this file share the same ID.');
+    habitIds.add(h.id);
+    if (!h.name.trim() || h.name.length > 200) return bad('A habit in this file has an empty or far too long name.');
+    if (h.unit.length > 50) return bad(`The unit of "${h.name.slice(0, 40)}" is far too long.`);
+    if (!Number.isFinite(h.target_value) || h.target_value > 1_000_000) {
+      return bad(`The daily target of "${h.name.slice(0, 40)}" is not a sensible number.`);
+    }
+    if (!Number.isFinite(h.sort_order)) return bad(`"${h.name.slice(0, 40)}" has a damaged position in the list.`);
+    if (Number.isNaN(Date.parse(h.created_at))) return bad(`"${h.name.slice(0, 40)}" has a damaged creation date.`);
+    if (h.goal && !isRealDate(h.goal.start)) return bad(`The goal of "${h.name.slice(0, 40)}" has an impossible start date.`);
+  }
+  const entryIds = new Set<string>();
+  for (const e of db.entries) {
+    if (entryIds.has(e.id)) return bad('Two check-ins in this file share the same ID.');
+    entryIds.add(e.id);
+    if (!isRealDate(e.date)) return bad(`A check-in has an impossible date (${e.date}).`);
+    if (!Number.isFinite(e.value) || e.value < 0 || e.value > 1_000_000) {
+      return bad('A check-in has an amount that is not a sensible number.');
+    }
+  }
+  for (const n of db.notes) if (!isRealDate(n.date)) return bad(`A note has an impossible date (${n.date}).`);
+  for (const k of db.skips) if (!isRealDate(k.date)) return bad(`A rest day has an impossible date (${k.date}).`);
+
+  // Colours are only decoration: a damaged one becomes the default green instead of refusing the file.
+  const habits = db.habits.map((h) => (isHexColor(h.color) ? h : { ...h, color: HABIT_COLORS[0] }));
+  const at = typeof top.exported_at === 'string' && !Number.isNaN(Date.parse(top.exported_at)) ? top.exported_at : null;
+  return {
+    db: { ...db, habits },
+    info: { habits: habits.length, entries: db.entries.length, notes: db.notes.length, skips: db.skips.length, exportedAt: at },
+  };
+}
+
+/** Checks a backup file and says what is in it, without changing anything. Throws BackupError if it is refused. */
+export function previewBackup(json: string): BackupInfo {
+  return checkBackup(json).info;
+}
+
+/** How much is on this device now. */
+export function currentCounts(): { habits: number; entries: number } {
+  const db = load();
+  return { habits: db.habits.length, entries: db.entries.length };
+}
+
+const KEY_SAFETY = `${KEY}:before-restore`;
+let restoredRaw: string | null = null; // the saved text right after the last restore, to know whether Undo is still safe
+
+/** Keeps a copy of what is on the device now, just before a restore. Only the latest copy is kept. */
+export function saveSafetyCopy(): boolean {
+  try {
+    localStorage.setItem(KEY_SAFETY, JSON.stringify({ saved_at: new Date().toISOString(), data: load() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Replaces everything on the device with the backup. Throws BackupError (file refused) or the storage error (device full); in both cases nothing was changed. */
 export function importBackup(json: string): void {
-  const next = validate(JSON.parse(json));
-  write(next);
-  cache = next;
+  const { db } = checkBackup(json);
+  write(db);
+  cache = db;
+  restoredRaw = lastRaw;
+}
+
+/**
+ * Puts back what was on the device before the last restore.
+ * 'changed': something was edited since the restore (here or in another tab), so Undo would lose that work.
+ * 'none': there is nothing usable to go back to.
+ */
+export function undoRestore(): 'ok' | 'changed' | 'none' {
+  try {
+    if (restoredRaw === null) return 'none';
+    if (localStorage.getItem(KEY) !== restoredRaw) return 'changed';
+    const saved = JSON.parse(localStorage.getItem(KEY_SAFETY) ?? 'null') as { data?: unknown } | null;
+    if (!saved) return 'none';
+    const db = validate(saved.data);
+    write(db);
+    cache = db;
+    restoredRaw = null;
+    return 'ok';
+  } catch {
+    return 'none';
+  }
 }

@@ -176,3 +176,15 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - **Year view fix (both themes):** the month names (Apr, May...) were drawn on top of the first row of squares. They now have their own row.
 - **Calendar and week-change speed (no change made):** profiled with 10 habits and 4,000 entries at 4x slower CPU (production-style build, alternating runs of 1.8.1 and 1.9.0). Opening the calendar costs one slow frame of about 65-100 ms, changing the week about 85-100 ms, and 1.8.1 and 1.9.0 measure the same within noise. Two ideas were tried and dropped: `content-visibility: auto` on the habit cards (a small gain, but it made the page height jump while scrolling and shifted dark-mode text by sub-pixels), and removing the `:has(:focus-visible)` rule on finished cards (no effect). Most of what is left is the browser building the 42 day squares and re-styling the page; it is fast on a normal phone.
 - Dark mode: no colour or layout changes. A pixel comparison against 1.8.1 found differences only in the year view (month names, above) and the version number in About.
+
+## New in 1.9.1 (safer Restore backup)
+
+- **The file is checked completely before anything is asked or changed.** A file that fails is refused with a plain reason ("The file is empty", "cannot be read", "made by a different app", "comes from a newer version", "A check-in has an impossible date (2026-02-30)", "Two habits share the same ID", an amount below 0 or absurdly large, and so on) and your data stays exactly as it was. Files over 20 MB are refused without being read. The rules are in `checkBackup` in `src/lib/store.ts`.
+- **The question shows what is in the file next to what is on the device** (habits and check-ins, and the date the backup was saved), and warns if the backup has fewer check-ins than the app has now.
+- **A safety copy of the current data is kept before restoring** (`habitflow:v1:before-restore` in the browser's storage; only the latest one is kept). If it cannot be saved because storage is nearly full, you are told and asked again.
+- **Undo** appears in the "Backup restored" message. It puts the earlier data back, but only while nothing has been changed since the restore; after any edit it refuses, so it can never wipe new work. Undo is only offered right after a restore (the safety copy stays in storage, but there is no menu entry for it).
+- **If the device is full** while restoring, you get a clear message and the current data is untouched (the old text said "not a valid backup" for every problem).
+- **Not refused on purpose:** old backups without notes, rest days or a version field; days that appear twice for one habit (older versions could make these); a damaged habit colour (it becomes the default green). Habits and history already on the device are loaded with the same looser rules as before, so these stricter rules cannot make existing data unreadable.
+- **Fix:** restoring a backup that took a streak from 6 to 7 (or 29 to 30, 99 to 100) days used to show the streak message instead of "Backup restored". The restore message now stays.
+- Dark mode and light mode are otherwise unchanged.
+

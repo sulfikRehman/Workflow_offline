@@ -92,6 +92,8 @@ export default function App() {
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** The notice text that currently offers "Undo" (set right after a restore). */
+  const [undoFor, setUndoFor] = useState<string | null>(null);
   const [nudge, setNudge] = useState<Nudge>(() => getNudge(store.getEntries().length > 0));
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -495,27 +497,95 @@ export default function App() {
     }
   }
 
+  /** Re-reads everything from storage after a restore or an undo, and closes windows that may show old data. */
+  function reloadFromStore() {
+    lastStreaks.current = null; // the data was swapped: do not mistake the new streaks for a streak that just grew
+    setHabits(store.getHabits());
+    setEntries(store.getEntries());
+    setNotes(store.getNotes());
+    setSkips(store.getSkips());
+    setEditingId(null);
+    setCalendarId(null);
+    setAmountFor(null);
+  }
+
   async function restoreBackup(file: File) {
+    // 1. Check the file completely before anything is asked or changed.
+    if (file.size > store.BACKUP_MAX_BYTES) {
+      fail('That file is far too big to be a HabitFlow backup. Nothing was changed.', new Error('backup too big'));
+      return;
+    }
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (err) {
+      fail('The file could not be read. Nothing was changed.', err);
+      return;
+    }
+    let info: store.BackupInfo;
+    try {
+      info = store.previewBackup(text);
+    } catch (err) {
+      const why = err instanceof store.BackupError ? err.message : 'That file is not a valid HabitFlow backup.';
+      fail(`${why} Nothing was changed.`, err);
+      return;
+    }
+
+    // 2. Say what is in it, next to what is here now, and ask.
+    const here = store.currentCounts();
+    const saved = info.exportedAt ? new Date(info.exportedAt).toLocaleDateString() : 'date unknown';
+    const lines = [
+      'Restore this backup?',
+      '',
+      `Backup file (${saved}): ${info.habits} habits, ${info.entries} check-ins.`,
+      `On this device now: ${here.habits} habits, ${here.entries} check-ins.`,
+    ];
+    if (info.entries < here.entries) {
+      lines.push('', 'This backup has FEWER check-ins than the app has now, so you would lose some history.');
+    }
+    lines.push('', 'Restoring REPLACES everything on this device. A safety copy is kept so you can undo it right after.');
+    if (!window.confirm(lines.join('\n'))) return;
+
+    // 3. Keep a copy of what is here now. If that is impossible, say so and ask again.
+    const copied = store.saveSafetyCopy();
     if (
+      !copied &&
       !window.confirm(
-        'Restore this backup? It will REPLACE all habits and history currently in the app.'
+        "A safety copy of your current data could not be saved (the phone's storage is nearly full), so Undo will not be possible. Restore anyway?"
       )
     )
       return;
+
+    // 4. Restore. If this fails, the old data is still in place.
     try {
-      store.importBackup(await file.text());
-      setHabits(store.getHabits());
-      setEntries(store.getEntries());
-      setNotes(store.getNotes());
-      setSkips(store.getSkips());
-      setEditingId(null);
-      setCalendarId(null);
-      setAmountFor(null);
+      store.importBackup(text);
+      reloadFromStore();
+      const message = `Backup restored: ${info.habits} habits, ${info.entries} check-ins.`;
       setError(null);
-      setNotice('Backup restored.');
+      setNotice(message);
+      setUndoFor(copied ? message : null);
       haptic('success');
     } catch (err) {
-      fail('That file is not a valid HabitFlow backup. Nothing was changed.', err);
+      const why =
+        err instanceof store.BackupError
+          ? err.message
+          : "The backup could not be saved on this device (its storage may be full).";
+      fail(`${why} Your current data was not changed.`, err);
+    }
+  }
+
+  function undoRestore() {
+    const result = store.undoRestore();
+    setUndoFor(null);
+    if (result === 'ok') {
+      reloadFromStore();
+      setError(null);
+      setNotice('Restore undone. The data you had before is back.');
+      haptic('success');
+    } else if (result === 'changed') {
+      setNotice('You have changed things since restoring, so Undo would lose that work. It is no longer possible.');
+    } else {
+      setNotice('There is no earlier data to go back to.');
     }
   }
 
@@ -637,12 +707,19 @@ export default function App() {
                 className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
               >
                 <span>{noticeP.item}</span>
-                <button
-                  onClick={() => setNotice(null)}
-                  className="text-xs font-medium text-green-200 underline"
-                >
-                  Dismiss
-                </button>
+                <span className="flex shrink-0 gap-3">
+                  {undoFor !== null && undoFor === noticeP.item && (
+                    <button onClick={undoRestore} className="text-xs font-semibold text-green-100 underline">
+                      Undo
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNotice(null)}
+                    className="text-xs font-medium text-green-200 underline"
+                  >
+                    Dismiss
+                  </button>
+                </span>
               </div>
             </div>
           </div>
