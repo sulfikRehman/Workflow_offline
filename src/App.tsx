@@ -18,6 +18,7 @@ import { shareFile } from '@/lib/share';
 import { dismissNudge, getNudge, markBackupSaved } from '@/lib/backupNudge';
 import type { Nudge } from '@/lib/backupNudge';
 import AboutModal from './AboutModal';
+import BackgroundModal from './BackgroundModal';
 import AmountModal from './AmountModal';
 import HabitCalendar from './HabitCalendar';
 import HabitForm from './HabitForm';
@@ -89,6 +90,7 @@ export default function App() {
   const [timerOpen, setTimerOpen] = useState(false);
   const [trendsOpen, setTrendsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -229,6 +231,7 @@ export default function App() {
   const timerP = usePresence(timerOpen ? true : null);
   const trendsP = usePresence(trendsOpen ? true : null);
   const aboutP = usePresence(aboutOpen ? true : null);
+  const backgroundP = usePresence(backgroundOpen ? true : null);
   const noticeP = usePresence(notice && !error ? notice : null);
   const errorP = usePresence(error);
   const nudgeP = usePresence(nudge);
@@ -241,7 +244,8 @@ export default function App() {
     amountP.item ||
     timerP.item ||
     trendsP.item ||
-    aboutP.item
+    aboutP.item ||
+    backgroundP.item
   );
   useEffect(() => {
     if (!windowOpen) return;
@@ -590,7 +594,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="hf-app min-h-screen bg-neutral-950 text-neutral-100">
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-neutral-800/60 bg-neutral-950/95 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl 2xl:max-w-[1440px]">
@@ -635,6 +639,7 @@ export default function App() {
               onRestoreBackup={() => fileRef.current?.click()}
               onExportCSV={downloadCSV}
               onAbout={() => setAboutOpen(true)}
+              onBackground={() => setBackgroundOpen(true)}
               canExport={habits.length > 0}
             />
           </div>
@@ -1013,6 +1018,19 @@ export default function App() {
           checkIns={entries.length}
           noteCount={notes.length}
           onClose={() => setAboutOpen(false)}
+        />
+      )}
+
+      {backgroundP.item && (
+        <BackgroundModal
+          key={`background${backgroundP.id}`}
+          closing={backgroundP.closing}
+          startLook={document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'}
+          onSaved={(m) => {
+            setError(null);
+            setNotice(m);
+          }}
+          onClose={() => setBackgroundOpen(false)}
         />
       )}
 

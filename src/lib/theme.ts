@@ -1,3 +1,5 @@
+import { applyBackground } from './backgrounds';
+
 // Dark / light / follow-the-phone appearance. Only a tiny bit of state, kept on this device.
 export type ThemePref = 'dark' | 'light' | 'auto';
 export const THEME_PREFS: ThemePref[] = ['dark', 'light', 'auto'];
@@ -39,6 +41,7 @@ export function applyTheme(pref: ThemePref = getThemePref()): 'dark' | 'light' {
   const theme = resolveTheme(pref, systemIsLight());
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', META_COLOR[theme]);
+  applyBackground(theme); // each look can have its own photo
   return theme;
 }
 

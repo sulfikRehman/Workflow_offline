@@ -4,7 +4,7 @@ import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.9.1';
+export const APP_VERSION = '1.10.0';
 
 type Props = {
   habitCount: number;
@@ -23,6 +23,7 @@ const TIPS: [string, string][] = [
   ['Trends', 'shows how your completion changes over a week, a month or 8 weeks.'],
   ['Reorder', 'lets you move habits up and down.'],
   ['New Habit', 'offers ready-made templates you can tweak.'],
+  ['Import Background', 'in the menu puts your own photo behind the home screen, one for the dark look and one for the light look.'],
   ['Timer', 'has a normal countdown and a Pomodoro mode; finished time can be added to a habit.'],
 ];
 

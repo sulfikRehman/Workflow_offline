@@ -188,3 +188,14 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - **Fix:** restoring a backup that took a streak from 6 to 7 (or 29 to 30, 99 to 100) days used to show the streak message instead of "Backup restored". The restore message now stays.
 - Dark mode and light mode are otherwise unchanged.
 
+
+## New in 1.10.0 (custom home-screen background)
+
+- **Menu → Import Background** (right under Appearance) opens a Background window. Choose a photo from your gallery or files, see it in a small Phone / Desktop preview, drag it (or use the arrow keys) to choose which part shows, pick the dimming (Subtle, Medium, Strong) and press Save. Nothing changes on the page until you press Save, and Cancel (or Back, or Esc) throws the edits away after asking.
+- **One photo for the Dark look and one for the Light look.** The right one appears by itself when you switch Dark, Light or Auto (Auto follows the phone). A look without a photo keeps the normal background. **Remove** (the bin button, then Save) brings the default back.
+- **Never stretched.** The photo fills the screen the way "cover" does: it is scaled evenly and the extra is cropped. On a phone it stays fixed while the habits scroll over it.
+- **Readable text.** A layer in the page colour is laid over the photo. Very bright photos (Dark look) and very dark photos (Light look) get a little extra automatically. While a photo is showing, the dark cards are firmer and small grey text is a step lighter. With no photo none of this applies and the app is pixel-for-pixel as before.
+- **Photos are shrunk when imported** to at most 2560 px on the long side (never enlarged) and saved as WebP (JPEG where the browser cannot), so a 12 MB camera photo becomes a few hundred KB. The picture is read the right way up (camera rotation is honoured), see-through areas are filled with the page colour, and animated GIFs become a still picture.
+- **Refused with a plain message:** HEIC/HEIF photos (browsers cannot open them), SVG drawings, PDFs and other non-pictures, empty files, files over 40 MB, pictures that are too small (shorter side under 240 px) or absurdly large (over 150 megapixels), and damaged files. The window stays open and nothing is changed.
+- **Where it is stored:** the photo is in IndexedDB (database `habitflow-backgrounds`), the small settings (which look has a photo, position, dimming) are in localStorage under `habitflow:backgrounds`. Habit data and other settings are never touched. **Photos are not part of backups and stay on this device.** If the browser clears the photo, the app falls back to the normal look and the window says so.
+- Changing the background in one open tab updates the others. If the browser cannot store photos (private browsing, no space) you get a message and the app keeps working.

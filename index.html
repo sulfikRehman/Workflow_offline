@@ -13,6 +13,11 @@
           var p = localStorage.getItem("habitflow:theme");
           var light = p === "light" || (p === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches);
           document.documentElement.setAttribute("data-theme", light ? "light" : "dark");
+          // A photo is saved for this look: mark it now so the page does not flash before the photo is ready.
+          try {
+            var b = JSON.parse(localStorage.getItem("habitflow:backgrounds") || "null");
+            if (b && b[light ? "light" : "dark"] && b[light ? "light" : "dark"].on === true) document.documentElement.setAttribute("data-bg", "on");
+          } catch (e2) {}
           if (light) {
             document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4efe4");
             // Start loading the light-mode serif right away so the big numbers do not change shape after showing.

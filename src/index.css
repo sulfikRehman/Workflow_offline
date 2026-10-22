@@ -267,3 +267,80 @@ button:not(:disabled):active {
 /* Enlarged invisible tap area (about 44px) without changing the layout. */
 .hit:where(:not(.absolute, .fixed, .sticky, .relative)) { position: relative; }
 .hit::after { content: ''; position: absolute; inset: -6px; }
+
+
+/* ---------- Custom home-screen photo (1.10) ----------
+   Every rule here needs html[data-bg='on'] or #hf-bg. That attribute and the #hf-bg layer exist only
+   while a photo is showing (see lib/backgrounds.ts), so with no photo none of this applies and the
+   app looks exactly as it did before.
+
+   From the bottom up:
+     html colour   - the normal page colour, so nothing flashes while the photo loads
+     #hf-bg        - the photo, fixed to the screen. "cover" fills the screen and crops the extra,
+                     so a picture is never stretched. The focal point comes from --hf-bg-x / --hf-bg-y.
+     #hf-bg::after - a cover in the page colour (--hf-bg-a) so text stays readable
+     #root         - the app, above both, with its own page colour made see-through
+   The windows (menus, pop-ups) keep their solid backgrounds and look the same with or without a photo. */
+html[data-bg='on'] { background-color: #0a0a0a; }
+html[data-bg='on'][data-theme='light'] { background-color: #f4efe4; }
+
+#hf-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--hf-bg-img, none);
+  background-position: var(--hf-bg-x, 50%) var(--hf-bg-y, 50%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: translateZ(0); /* its own layer, so scrolling the page never repaints the photo */
+}
+#hf-bg.ready {
+  opacity: 1;
+  transition: opacity 420ms var(--ease-out);
+}
+#hf-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: #0a0a0a;
+  opacity: var(--hf-bg-a, 0.66);
+}
+html[data-theme='light'] #hf-bg::after { background-color: #f4efe4; }
+@media (prefers-reduced-motion: reduce) {
+  #hf-bg.ready { transition: none; }
+}
+
+html[data-bg='on'] #root { position: relative; z-index: 1; }
+html[data-bg='on'] .hf-app.hf-app { background-color: transparent; }
+
+/* The top bar keeps its body so it stays readable, and lets a little of the photo through. */
+html[data-bg='on'][data-theme='dark'] .hf-app > header.sticky { background-color: rgb(10 10 10 / 0.84); }
+html[data-bg='on'][data-theme='light'] .hf-app > header.sticky { background-color: rgb(244 239 228 / 0.86); }
+
+/* Dark cards are normally see-through (they sit on plain black). Over a photo they need more body.
+   Only the home screen (<main>) is changed; pop-up windows are untouched. */
+html[data-bg='on'][data-theme='dark'] main .bg-neutral-900\/40 { background-color: rgb(23 23 23 / 0.88); }
+html[data-bg='on'][data-theme='dark'] main .bg-neutral-900\/30 { background-color: rgb(23 23 23 / 0.8); }
+html[data-bg='on'][data-theme='dark'] main .hf-card .bg-neutral-900\/30 { background-color: rgb(23 23 23 / 0.3); } /* day chips inside a card keep their look */
+html[data-bg='on'][data-theme='dark'] main .bg-green-500\/10 { background-color: rgb(14 40 24 / 0.86); }
+html[data-bg='on'][data-theme='dark'] main .bg-red-500\/10 { background-color: rgb(48 17 17 / 0.88); }
+html[data-bg='on'][data-theme='dark'] main .bg-amber-500\/10 { background-color: rgb(44 31 9 / 0.88); }
+/* Small grey text is lifted a step over a photo, so it stays readable on bright or busy pictures. */
+html[data-bg='on'][data-theme='dark'] main .text-neutral-400 { color: #bdbdbd; }
+html[data-bg='on'][data-theme='dark'] main .text-neutral-500 { color: #acacac; }
+html[data-bg='on'][data-theme='dark'] main .text-neutral-600 { color: #939393; }
+/* Plain text sitting straight on the photo (headings, the empty-state text) gets a faint shadow. */
+html[data-bg='on'][data-theme='dark'] main { text-shadow: 0 1px 2px rgb(0 0 0 / 0.4); }
+html[data-bg='on'][data-theme='dark'] main :is(.hf-card, .hf-stat, .hf-today, [role='status'], [role='alert']) { text-shadow: none; }
+
+/* Light cards are already almost solid cream; the see-through ones get a little more body. */
+html[data-bg='on'][data-theme='light'] main .bg-neutral-900\/30 { background-color: rgb(252 250 243 / 0.82); }
+html[data-bg='on'][data-theme='light'] main .hf-card .bg-neutral-900\/30 { background-color: rgb(252 250 243 / 0.6); }
+html[data-bg='on'][data-theme='light'] main .text-neutral-500 { color: #454c3f; }
+html[data-bg='on'][data-theme='light'] main .text-neutral-600 { color: #4f5649; }
+/* ...but the forest-green "Today" card and today's pill keep their cream text. */
+html[data-bg='on'][data-theme='light'] main .hf-today .text-neutral-500 { color: rgb(252 250 243 / 0.74); }
+html[data-bg='on'][data-theme='light'] main .hf-day-today .text-neutral-500,
+html[data-bg='on'][data-theme='light'] main .hf-day-today .text-neutral-600 { color: rgb(252 250 243 / 0.78); }

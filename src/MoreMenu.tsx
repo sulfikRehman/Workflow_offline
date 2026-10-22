@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Info, Menu, Save, Share2, Upload, X } from 'lucide-react';
+import { Download, Image as ImageIcon, Info, Menu, Save, Share2, Upload, X } from 'lucide-react';
 import {
   LEVELS,
   getHapticLevel,
@@ -11,6 +11,7 @@ import {
 import type { HapticLevel } from '@/lib/haptics';
 import { THEME_PREFS, getThemePref, setThemePref } from '@/lib/theme';
 import type { ThemePref } from '@/lib/theme';
+import { backgroundSummary } from '@/lib/backgrounds';
 import { usePresence } from './usePresence';
 import { useBackClose } from './useBackClose';
 
@@ -20,6 +21,7 @@ type Props = {
   onRestoreBackup: () => void;
   onExportCSV: () => void;
   onAbout: () => void;
+  onBackground: () => void;
   /** CSV export needs at least one habit. */
   canExport: boolean;
 };
@@ -41,6 +43,7 @@ export default function MoreMenu({
   onRestoreBackup,
   onExportCSV,
   onAbout,
+  onBackground,
   canExport,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -180,6 +183,13 @@ export default function MoreMenu({
               Auto follows your phone&apos;s light or dark setting.
             </p>
           </div>
+          <button onClick={() => run(onBackground)} className={itemCls}>
+            <ImageIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+            <span>
+              Import Background
+              <span className="block text-[0.6875rem] text-neutral-500">{backgroundSummary()}</span>
+            </span>
+          </button>
 
           {hapticsSupported() && (
             <>
