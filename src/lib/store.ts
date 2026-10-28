@@ -1,6 +1,7 @@
 // Local-first storage: all data lives on this device (localStorage). No server, no account.
 import { todayISO } from './date.ts';
 import { HABIT_COLORS, isHexColor } from './colors.ts';
+import { EPOCH, SEED_ID_PREFIX, TOMBSTONE_DAYS, visibleData } from './sync.ts';
 
 export type Habit = {
   id: string;
@@ -11,6 +12,8 @@ export type Habit = {
   color: string;
   sort_order: number;
   created_at: string;
+  /** When this habit was last changed (ISO time). Used to decide which copy wins when devices sync. */
+  updated_at?: string;
   /** Days of the week the habit is scheduled (0 = Sunday ... 6 = Saturday). Missing = every day. */
   days?: number[];
   /** Archived habits are hidden from the main list and stats but keep their history. */
@@ -28,6 +31,8 @@ export type HabitEntry = {
   date: string; // YYYY-MM-DD
   value: number;
   created_at: string;
+  /** When this check-in was last changed. */
+  updated_at?: string;
 };
 
 /** A short note about one habit on one day (for example why a day was skipped). */
@@ -35,18 +40,34 @@ export type HabitNote = {
   habit_id: string;
   date: string; // YYYY-MM-DD
   text: string;
+  /** When this note was last changed. */
+  updated_at?: string;
 };
 
 /** A day marked as a rest day for one habit: it does not count for or against the streak. */
 export type HabitSkip = {
   habit_id: string;
   date: string; // YYYY-MM-DD
+  /** When this rest day was last set. */
+  updated_at?: string;
 };
+
+/**
+ * A marker that something was deleted on purpose (and when), so another device does not send it back.
+ * `key` is the habit's id, or "habitId|YYYY-MM-DD" for a check-in, note or rest day.
+ */
+export type Tombstone = { kind: 'habit' | 'entry' | 'note' | 'skip'; key: string; at: string };
 
 export const NOTE_MAX = 200;
 export const GOAL_MAX = 10000;
 
-type DB = { habits: Habit[]; entries: HabitEntry[]; notes: HabitNote[]; skips: HabitSkip[] };
+export type DB = {
+  habits: Habit[];
+  entries: HabitEntry[];
+  notes: HabitNote[];
+  skips: HabitSkip[];
+  deleted: Tombstone[];
+};
 
 const KEY = 'habitflow:v1';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -56,6 +77,46 @@ function uid(): string {
     return crypto.randomUUID();
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+let lastStamp = 0;
+/**
+ * The time to put on a change. Always later than the previous one from this device, even if the phone's
+ * clock stands still or jumps back, so two quick edits can never tie or swap places.
+ */
+function stamp(): string {
+  const t = Math.max(Date.now(), lastStamp + 1);
+  lastStamp = t;
+  return new Date(t).toISOString();
+}
+
+/** After loading: never stamp earlier than something this device already stamped (a clock that went backwards). */
+function seedStamp(db: DB): void {
+  const limit = Date.now() + 24 * 3_600_000; // a clock that went back up to a day is allowed for; anything further ahead is a mistake
+  for (const list of [db.habits, db.entries, db.notes, db.skips] as { updated_at?: string }[][]) {
+    for (const x of list) {
+      const t = Date.parse(x.updated_at ?? '');
+      if (Number.isFinite(t) && t <= limit && t > lastStamp) lastStamp = t;
+    }
+  }
+}
+
+const KEEP_TOMBSTONES_MS = TOMBSTONE_DAYS * 86_400_000;
+
+/** Adds a deletion marker (replacing an older one for the same thing) and drops markers too old to matter. */
+function withTombstone(deleted: Tombstone[], kind: Tombstone['kind'], key: string, at: string): Tombstone[] {
+  const cutoff = Date.now() - KEEP_TOMBSTONES_MS;
+  return [
+    ...deleted.filter((d) => !(d.kind === kind && d.key === key) && Date.parse(d.at) >= cutoff),
+    { kind, key, at },
+  ];
+}
+
+/** Something was (re)created: any older deletion marker for it is no longer needed. */
+function withoutTombstone(deleted: Tombstone[], kind: Tombstone['kind'], key: string): Tombstone[] {
+  return deleted.some((d) => d.kind === kind && d.key === key)
+    ? deleted.filter((d) => !(d.kind === kind && d.key === key))
+    : deleted;
 }
 
 function seed(): DB {
@@ -69,7 +130,10 @@ function seed(): DB {
   ];
   return {
     habits: defaults.map(([name, icon, unit, target_value, color], i) => ({
-      id: uid(),
+      // Fixed IDs and the oldest possible "last changed" time: two new devices get the same sample habits
+      // (not two sets), and anything you do with them later always counts as newer.
+      id: `${SEED_ID_PREFIX}${name.toLowerCase()}`,
+      updated_at: EPOCH,
       name,
       icon,
       unit,
@@ -81,6 +145,7 @@ function seed(): DB {
     entries: [],
     notes: [],
     skips: [],
+    deleted: [],
   };
 }
 
@@ -184,7 +249,39 @@ function validate(data: unknown): DB {
   if (!Array.isArray(skips) || !skips.every(isSkip) || !skips.every((n) => ids.has(n.habit_id))) {
     throw new Error('Invalid data');
   }
-  return { habits: d.habits, entries: d.entries, notes, skips };
+  // Deletion markers were added with syncing (1.11): older data has none. They are bookkeeping, so a damaged one is dropped, not fatal.
+  const deleted = (d as { deleted?: unknown }).deleted;
+  const tombs = Array.isArray(deleted) ? deleted.filter(isTombstone) : [];
+  return withTimes({ habits: d.habits, entries: d.entries, notes, skips, deleted: tombs });
+}
+
+function isTombstone(t: unknown): t is Tombstone {
+  const x = t as Tombstone;
+  return (
+    !!x &&
+    (x.kind === 'habit' || x.kind === 'entry' || x.kind === 'note' || x.kind === 'skip') &&
+    typeof x.key === 'string' &&
+    x.key.length > 0 &&
+    typeof x.at === 'string' &&
+    !Number.isNaN(Date.parse(x.at))
+  );
+}
+
+const validTime = (t: unknown): t is string => typeof t === 'string' && !Number.isNaN(Date.parse(t));
+
+/**
+ * Data from before syncing has no "last changed" times. Give each item one: the day it was created, or the
+ * oldest possible time where there is none, so any real edit made later counts as newer. (Worked out again
+ * each time the data is loaded, so nothing needs to be rewritten for it.)
+ */
+function withTimes(db: DB): DB {
+  return {
+    habits: db.habits.map((h) => (validTime(h.updated_at) ? h : { ...h, updated_at: validTime(h.created_at) ? h.created_at : EPOCH })),
+    entries: db.entries.map((e) => (validTime(e.updated_at) ? e : { ...e, updated_at: validTime(e.created_at) ? e.created_at : EPOCH })),
+    notes: db.notes.map((n) => (validTime(n.updated_at) ? n : { ...n, updated_at: EPOCH })),
+    skips: db.skips.map((k) => (validTime(k.updated_at) ? k : { ...k, updated_at: EPOCH })),
+    deleted: db.deleted,
+  };
 }
 
 let cache: DB | null = null;
@@ -251,6 +348,7 @@ function load(): DB {
   }
   try {
     cache = validate(JSON.parse(raw));
+    seedStamp(cache);
   } catch {
     // Never silently destroy unreadable data: keep a copy before starting fresh.
     try {
@@ -264,7 +362,7 @@ function load(): DB {
 }
 
 export function getHabits(): Habit[] {
-  return [...load().habits].sort((a, b) => a.sort_order - b.sort_order);
+  return [...load().habits].sort((a, b) => a.sort_order - b.sort_order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 export function getEntries(): HabitEntry[] {
@@ -295,6 +393,7 @@ export function addHabit(data: {
     color: data.color ?? '#22c55e',
     sort_order: db.habits.reduce((m, h) => Math.max(m, h.sort_order), 0) + 1,
     created_at: new Date().toISOString(),
+    updated_at: stamp(),
     ...(days ? { days } : {}),
     ...(data.goal_days != null ? { goal: { days: data.goal_days, start: todayISO() } } : {}),
   };
@@ -332,7 +431,7 @@ export function updateHabit(id: string, patch: HabitPatch): Habit {
   if (patch.color !== undefined && !isHexColor(patch.color)) throw new Error('Invalid habit');
   if (patch.goal_days != null && !isGoalDays(patch.goal_days)) throw new Error('Invalid habit');
   const { days: newDays, archived, goal_days, ...rest } = patch;
-  const habit: Habit = { ...old, ...rest };
+  const habit: Habit = { ...old, ...rest, updated_at: stamp() };
   if (goal_days !== undefined) {
     if (goal_days === null) delete habit.goal;
     else habit.goal = { days: goal_days, start: old.goal?.start ?? todayISO() };
@@ -354,11 +453,13 @@ export function updateHabit(id: string, patch: HabitPatch): Habit {
 
 export function deleteHabit(id: string): void {
   const db = load();
-  const next = {
+  const next: DB = {
     habits: db.habits.filter((h) => h.id !== id),
     entries: db.entries.filter((e) => e.habit_id !== id),
     notes: db.notes.filter((n) => n.habit_id !== id),
     skips: db.skips.filter((n) => n.habit_id !== id),
+    // Remember the deletion (its check-ins, notes and rest days go with the habit on every device).
+    deleted: db.habits.some((h) => h.id === id) ? withTombstone(db.deleted, 'habit', id, stamp()) : db.deleted,
   };
   write(next);
   cache = next;
@@ -375,8 +476,14 @@ export function setNote(habit_id: string, date: string, text: string): HabitNote
   const db = load();
   if (!db.habits.some((h) => h.id === habit_id)) throw new Error('Habit not found');
   const others = db.notes.filter((n) => !(n.habit_id === habit_id && n.date === date));
-  const note = clean ? { habit_id, date, text: clean } : null;
-  const next = { ...db, notes: note ? [...others, note] : others };
+  const had = others.length !== db.notes.length;
+  const key = `${habit_id}|${date}`;
+  const note: HabitNote | null = clean ? { habit_id, date, text: clean, updated_at: stamp() } : null;
+  const next = {
+    ...db,
+    notes: note ? [...others, note] : others,
+    deleted: note ? withoutTombstone(db.deleted, 'note', key) : had ? withTombstone(db.deleted, 'note', key, stamp()) : db.deleted,
+  };
   write(next);
   cache = next;
   return note;
@@ -393,10 +500,15 @@ export function setSkip(habit_id: string, date: string, on: boolean): void {
   if (!db.habits.some((h) => h.id === habit_id)) throw new Error('Habit not found');
   const has = db.skips.some((s) => s.habit_id === habit_id && s.date === date);
   if (has === on) return;
+  const key = `${habit_id}|${date}`;
   const skips = on
-    ? [...db.skips, { habit_id, date }]
+    ? [...db.skips, { habit_id, date, updated_at: stamp() }]
     : db.skips.filter((s) => !(s.habit_id === habit_id && s.date === date));
-  const next = { ...db, skips };
+  const next = {
+    ...db,
+    skips,
+    deleted: on ? withoutTombstone(db.deleted, 'skip', key) : withTombstone(db.deleted, 'skip', key, stamp()),
+  };
   write(next);
   cache = next;
 }
@@ -416,7 +528,9 @@ export function moveHabit(id: string, direction: 'up' | 'down'): Habit[] {
   const a = sorted.indexOf(visible[i]);
   const b = sorted.indexOf(visible[j]);
   [sorted[a], sorted[b]] = [sorted[b], sorted[a]];
-  const renumbered = sorted.map((h, k) => ({ ...h, sort_order: k + 1 }));
+  const at = stamp();
+  // Only the habits whose place actually changed count as edited.
+  const renumbered = sorted.map((h, k) => (h.sort_order === k + 1 ? h : { ...h, sort_order: k + 1, updated_at: at }));
   const next = { ...db, habits: renumbered };
   write(next);
   cache = next;
@@ -430,30 +544,35 @@ export function setEntry(habit_id: string, date: string, value: number): HabitEn
   const db = load();
   const existing = db.entries.find((e) => e.habit_id === habit_id && e.date === date);
   const entry: HabitEntry = existing
-    ? { ...existing, value }
-    : { id: uid(), habit_id, date, value, created_at: new Date().toISOString() };
+    ? { ...existing, value, updated_at: stamp() }
+    : { id: uid(), habit_id, date, value, created_at: new Date().toISOString(), updated_at: stamp() };
   const next = {
     ...db,
     entries: existing
       ? db.entries.map((e) => (e.id === existing.id ? entry : e))
       : [...db.entries, entry],
+    deleted: withoutTombstone(db.deleted, 'entry', `${habit_id}|${date}`),
   };
   write(next);
   cache = next;
   return entry;
 }
 
+/** 2 since syncing groundwork (1.11): items carry a "last changed" time and deletions are remembered. Version 1 files still restore. */
+export const BACKUP_VERSION = 2;
+
 export function exportBackup(): string {
   const db = load();
   return JSON.stringify(
     {
       app: 'habitflow',
-      version: 1,
+      version: BACKUP_VERSION,
       exported_at: new Date().toISOString(),
       habits: db.habits,
       entries: db.entries,
       notes: db.notes,
       skips: db.skips,
+      deleted: db.deleted,
     },
     null,
     2
@@ -511,7 +630,7 @@ function checkBackup(json: string): { db: DB; info: BackupInfo } {
     if (typeof top.version !== 'number' || !Number.isFinite(top.version) || top.version < 1) {
       return bad('This backup has an unknown version.');
     }
-    if (top.version > 1) {
+    if (top.version > BACKUP_VERSION) {
       return bad('This backup comes from a newer version of HabitFlow. Update the app first, then try again.');
     }
   }
@@ -587,9 +706,67 @@ export function saveSafetyCopy(): boolean {
 /** Replaces everything on the device with the backup. Throws BackupError (file refused) or the storage error (device full); in both cases nothing was changed. */
 export function importBackup(json: string): void {
   const { db } = checkBackup(json);
+  replaceAll(db);
+  restoredRaw = lastRaw;
+}
+
+const dayKey = (x: { habit_id: string; date: string }) => `${x.habit_id}|${x.date}`;
+
+/**
+ * Makes `next` the whole data of this device, as ONE deliberate change: everything in it counts as changed
+ * right now, and whatever was here but is not in it counts as deleted right now. That way a restore (or an
+ * undo of one) is what other devices will end up with after syncing, instead of being undone by them.
+ * Throws the storage error (device full) without changing anything.
+ */
+function replaceAll(next: DB): void {
+  const cur = load();
+  const at = stamp();
+  const habits = next.habits.map((h) => ({ ...h, updated_at: at }));
+  const entries = next.entries.map((e) => ({ ...e, updated_at: at }));
+  const notes = next.notes.map((n) => ({ ...n, updated_at: at }));
+  const skips = next.skips.map((k) => ({ ...k, updated_at: at }));
+  const live = {
+    habit: new Set(habits.map((h) => h.id)),
+    entry: new Set(entries.map(dayKey)),
+    note: new Set(notes.map(dayKey)),
+    skip: new Set(skips.map(dayKey)),
+  };
+  const gone: Tombstone[] = [];
+  for (const h of cur.habits) if (!live.habit.has(h.id)) gone.push({ kind: 'habit', key: h.id, at });
+  // Items of habits that are going away leave with the habit; only the rest need their own marker.
+  for (const e of cur.entries) if (live.habit.has(e.habit_id) && !live.entry.has(dayKey(e))) gone.push({ kind: 'entry', key: dayKey(e), at });
+  for (const n of cur.notes) if (live.habit.has(n.habit_id) && !live.note.has(dayKey(n))) gone.push({ kind: 'note', key: dayKey(n), at });
+  for (const k of cur.skips) if (live.habit.has(k.habit_id) && !live.skip.has(dayKey(k))) gone.push({ kind: 'skip', key: dayKey(k), at });
+
+  const cutoff = Date.now() - KEEP_TOMBSTONES_MS;
+  const latest = new Map<string, Tombstone>();
+  for (const d of [...cur.deleted, ...next.deleted, ...gone]) {
+    const id = `${d.kind}:${d.key}`;
+    const old = latest.get(id);
+    if (!old || Date.parse(d.at) > Date.parse(old.at)) latest.set(id, d);
+  }
+  const deleted = [...latest.values()].filter((d) => !live[d.kind].has(d.key) && Date.parse(d.at) >= cutoff);
+
+  const db: DB = { habits, entries, notes, skips, deleted };
   write(db);
   cache = db;
-  restoredRaw = lastRaw;
+}
+
+// ---------- For syncing (used by the sync code added later; nothing calls these yet) ----------
+
+/** A copy of everything, including the deletion markers, for merging with another device's copy. */
+export function getSyncData(): DB {
+  const d = load();
+  return { habits: [...d.habits], entries: [...d.entries], notes: [...d.notes], skips: [...d.skips], deleted: [...d.deleted] };
+}
+
+/** Saves already-merged data exactly as it is (no new times) and tells the screen. Throws if it is not valid or the device is full. */
+export function adoptSyncData(data: DB): void {
+  const db = validate(visibleData(data));
+  write(db);
+  cache = db;
+  seedStamp(db);
+  listeners.forEach((f) => f());
 }
 
 /**
@@ -603,9 +780,7 @@ export function undoRestore(): 'ok' | 'changed' | 'none' {
     if (localStorage.getItem(KEY) !== restoredRaw) return 'changed';
     const saved = JSON.parse(localStorage.getItem(KEY_SAFETY) ?? 'null') as { data?: unknown } | null;
     if (!saved) return 'none';
-    const db = validate(saved.data);
-    write(db);
-    cache = db;
+    replaceAll(validate(saved.data));
     restoredRaw = null;
     return 'ok';
   } catch {

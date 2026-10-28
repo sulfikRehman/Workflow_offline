@@ -199,3 +199,18 @@ The light look is generated from the colour classes used in `src/*.tsx`. If you 
 - **Refused with a plain message:** HEIC/HEIF photos (browsers cannot open them), SVG drawings, PDFs and other non-pictures, empty files, files over 40 MB, pictures that are too small (shorter side under 240 px) or absurdly large (over 150 megapixels), and damaged files. The window stays open and nothing is changed.
 - **Where it is stored:** the photo is in IndexedDB (database `habitflow-backgrounds`), the small settings (which look has a photo, position, dimming) are in localStorage under `habitflow:backgrounds`. Habit data and other settings are never touched. **Photos are not part of backups and stay on this device.** If the browser clears the photo, the app falls back to the normal look and the window says so.
 - Changing the background in one open tab updates the others. If the browser cannot store photos (private browsing, no space) you get a message and the app keeps working.
+
+## New in 1.11.0 (groundwork for syncing between devices)
+
+Nothing visible changes and nothing syncs yet. This version prepares the data so that two devices can be combined safely later (Google sign-in and the online copy come next).
+
+- **A "last changed" time on every habit, check-in, note and rest day** (`updated_at`). It is written whenever you change something. Data from before this version gets a time worked out from the day it was created (or the oldest possible time for notes and rest days), so any real edit counts as newer. Opening the app does not rewrite your data.
+- **Deletion markers.** Deleting a habit, clearing a note or un-marking a rest day leaves a small marker with the time. Without it, another device would send the deleted thing back. Markers are forgotten after a year (a device that stays offline for more than a year could bring old deletions back).
+- **Sample habits have fixed IDs** (`seed-study`, ...) and the oldest possible time, so two brand-new devices do not end up with two sets of samples, and a sample habit deleted on one device is not brought back by a new one.
+- **Two edits can never tie or swap places**, even if the phone's clock stands still or goes back a little (up to a day).
+- **The merge** (`src/lib/sync.ts`, not used by the app yet): for the same item the newest change wins (the whole item, not single fields); a deletion beats an older edit and an edit after a deletion brings the item back; deleting a habit removes its history; a clock that is ahead cannot win forever (future times count as "now"); the result is the same whichever copy is merged first (checked on 400 random cases). Check-ins, notes and rest days are matched by habit and day, so two devices that tick the same day separately end up with one check-in.
+- **Backups are version 2** (they carry the times and deletion markers). Old version 1 backups still restore. A backup from a newer version is refused with a clear message.
+- **Restore and Undo count as one deliberate change**: everything in the restored data counts as changed now, and whatever it replaced counts as deleted now, so a restore on one device is what other devices will end up with instead of being undone by their older data.
+- Habits with the same position are now ordered by ID, so the order is the same on every device.
+
+Not done yet: Google sign-in, the online copy, security rules and the background syncing itself (the next step, which needs a free Firebase project). Photos (backgrounds) will stay on each device.

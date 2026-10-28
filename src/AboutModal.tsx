@@ -4,7 +4,7 @@ import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.10.0';
+export const APP_VERSION = '1.11.0';
 
 type Props = {
   habitCount: number;
