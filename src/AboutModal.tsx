@@ -4,7 +4,7 @@ import { useBackClose } from './useBackClose';
 import { useDialog } from './useDialog';
 import { backdropCls, sheetAnimCls } from './ui';
 
-export const APP_VERSION = '1.11.0';
+export const APP_VERSION = '1.12.0';
 
 type Props = {
   habitCount: number;
@@ -24,6 +24,7 @@ const TIPS: [string, string][] = [
   ['Reorder', 'lets you move habits up and down.'],
   ['New Habit', 'offers ready-made templates you can tweak.'],
   ['Import Background', 'in the menu puts your own photo behind the home screen, one for the dark look and one for the light look.'],
+  ['Cloud sync', 'in the menu is optional. It keeps your phone and PC in step through your own free Firebase project.'],
   ['Timer', 'has a normal countdown and a Pomodoro mode; finished time can be added to a habit.'],
 ];
 
@@ -58,8 +59,9 @@ export default function AboutModal({ habitCount, checkIns, noteCount, onClose, c
         </div>
 
         <p className="mt-4 text-sm leading-relaxed text-neutral-300">
-          A private habit tracker for one person. It has no account and no server: everything you
-          enter stays in this browser on this device.
+          A private habit tracker for one person. By default it has no account and no server: everything you
+          enter stays in this browser on this device. If you choose to turn on Cloud sync, your habits are also
+          kept in your own Firebase project so your other devices can show them.
         </p>
 
         <div className="mt-4 grid grid-cols-3 gap-2">

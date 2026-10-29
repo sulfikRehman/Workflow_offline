@@ -321,10 +321,19 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', resync);
 }
 
+const savedHooks = new Set<() => void>();
+
+/** Calls `cb` every time this tab saves a change (used to start syncing soon after a change). Returns a way to stop. */
+export function onLocalSave(cb: () => void): () => void {
+  savedHooks.add(cb);
+  return () => savedHooks.delete(cb);
+}
+
 function write(db: DB): void {
   const raw = JSON.stringify(db);
   localStorage.setItem(KEY, raw);
   lastRaw = raw;
+  savedHooks.forEach((f) => f());
 }
 
 function load(): DB {

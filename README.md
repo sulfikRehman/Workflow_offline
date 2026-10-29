@@ -1,11 +1,12 @@
 # HabitFlow
 
 Personal habit tracker (Vite + React + TypeScript). Works offline, installs on your phone.
-All data is stored **on your device only** (browser localStorage). There is no server, no
-database and no account, so nobody else can see it.
+By default all data is stored **on your device only** (browser localStorage). There is no server, no
+database and no account, so nobody else can see it. Since 1.12 you can optionally turn on **Cloud sync**
+(Menu), which keeps your devices in step through your own free Firebase project.
 
 ## Run / build
-    npm install
+    npm install        # includes "firebase", only used when Cloud sync is turned on
     npm run dev        # local development
     npm run build      # static site in dist/
 
@@ -214,3 +215,19 @@ Nothing visible changes and nothing syncs yet. This version prepares the data so
 - Habits with the same position are now ordered by ID, so the order is the same on every device.
 
 Not done yet: Google sign-in, the online copy, security rules and the background syncing itself (the next step, which needs a free Firebase project). Photos (backgrounds) will stay on each device.
+
+## New in 1.12.0 (optional Cloud sync)
+
+Menu → **Cloud sync** keeps your phone and PC in step through **your own** free Firebase project (Google sign-in + Firestore). It is **off by default**; with it off the app behaves exactly as before and never contacts Firebase. Setup steps: `tools/firebase-setup.md`; the database rules: `tools/firestore.rules`.
+
+- **Local-first.** The app always reads and writes this device, so it opens and works with no internet. Syncing happens in the background a few seconds after a change, when the app opens or comes to the front, when internet returns, and when another device says it wrote something. A failed round changes nothing and is retried later (20 s, 1 min, 5 min, 15 min).
+- **Safe merging.** Uses the 1.11 merge (newest change wins per item, deletions are remembered, a wrong clock cannot win forever). A new device with only the sample habits takes the cloud data as it is; a device already in use is merged with it, nothing is thrown away.
+- **Layout in the cloud**: small pieces `h` (habits), `e-YYYY-MM` (check-ins), `n-YYYY-MM` (notes), `s-YYYY-MM` (rest days), each with its deletion markers, under `users/<your id>/pieces`. Each write re-reads the piece and merges first inside a Firestore transaction, so two devices writing at once cannot overwrite each other. Only pieces that differ are written. Leftovers of deleted habits and expired markers are cleaned out of the cloud as pieces are rewritten.
+- **Restore backup** while sync is on warns that it will replace the data on your other devices (it is one deliberate change, so they follow it).
+- **Not synced** (stay per device): background photos, light/dark choice, vibration settings, the sync settings themselves.
+- **Cloud sync window**: paste the Firebase settings once per device, sign in with Google, status/last-synced, Sync now, Turn off, Delete my cloud data (removes it from Google's servers and turns sync off; this device keeps everything).
+- **Loaded only when used**: the Firebase code is a separate file fetched on demand, so the normal app is as small and as fast as before. Once fetched it is kept for offline use.
+- **Free limits** (Firebase Spark plan): about 1 GiB stored, 50,000 reads and 20,000 writes a day. A sync round reads each piece once (about 3 per month of history plus 1), so heavy use stays far below that.
+- Backups still work and are still worth saving.
+
+To skip the pasting on every device, fill in `DEFAULT_FIREBASE_CONFIG` in `src/lib/firebaseConfig.ts` and rebuild (these values are not secrets).

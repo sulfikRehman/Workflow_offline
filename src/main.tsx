@@ -6,6 +6,7 @@ import { installTapHaptics } from '@/lib/haptics';
 import { noteFirstSeen } from '@/lib/backupNudge';
 import { applyTheme, watchSystemTheme } from '@/lib/theme';
 import { initBackgrounds } from '@/lib/backgrounds';
+import { initCloudSync } from '@/lib/cloudSync';
 import './index.css';
 import './light-theme.css';
 import './light-design.css';
@@ -13,6 +14,7 @@ import './light-design.css';
 applyTheme();
 watchSystemTheme();
 initBackgrounds();
+initCloudSync();
 installTapHaptics();
 noteFirstSeen();
 

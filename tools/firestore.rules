@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each signed-in person can only touch their own folder: users/<their id>/pieces/...
+    match /users/{uid}/pieces/{piece} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == uid
+                            && request.resource.data.keys().hasOnly(['json', 'at', 'by']);
+    }
+
+    // Everything else is closed.
+  }
+}
+
+// OPTIONAL, stricter: only let ONE Google account in at all. Replace the two "request.auth != null &&
+// request.auth.uid == uid" lines above with:
+//   request.auth != null && request.auth.uid == uid && request.auth.token.email == 'you@gmail.com'

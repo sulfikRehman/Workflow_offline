@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CSSProperties } from 'react';
 import * as store from '@/lib/store';
+import { getSyncView } from '@/lib/cloudSync';
 import type { Habit, HabitEntry, HabitNote, HabitSkip } from '@/lib/store';
 import { getWeekDays, shiftWeek, toISODate, isToday, shortDate, todayISO } from '@/lib/date';
 import { getHabitIcon } from '@/lib/icons';
@@ -19,6 +20,7 @@ import { dismissNudge, getNudge, markBackupSaved } from '@/lib/backupNudge';
 import type { Nudge } from '@/lib/backupNudge';
 import AboutModal from './AboutModal';
 import BackgroundModal from './BackgroundModal';
+import SyncModal from './SyncModal';
 import AmountModal from './AmountModal';
 import HabitCalendar from './HabitCalendar';
 import HabitForm from './HabitForm';
@@ -91,6 +93,7 @@ export default function App() {
   const [trendsOpen, setTrendsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -232,6 +235,7 @@ export default function App() {
   const trendsP = usePresence(trendsOpen ? true : null);
   const aboutP = usePresence(aboutOpen ? true : null);
   const backgroundP = usePresence(backgroundOpen ? true : null);
+  const syncP = usePresence(syncOpen ? true : null);
   const noticeP = usePresence(notice && !error ? notice : null);
   const errorP = usePresence(error);
   const nudgeP = usePresence(nudge);
@@ -245,7 +249,8 @@ export default function App() {
     timerP.item ||
     trendsP.item ||
     aboutP.item ||
-    backgroundP.item
+    backgroundP.item ||
+    syncP.item
   );
   useEffect(() => {
     if (!windowOpen) return;
@@ -548,6 +553,9 @@ export default function App() {
       lines.push('', 'This backup has FEWER check-ins than the app has now, so you would lose some history.');
     }
     lines.push('', 'Restoring REPLACES everything on this device. A safety copy is kept so you can undo it right after.');
+    if (getSyncView().on) {
+      lines.push('', 'Cloud sync is ON: the restored data will also replace the data on your other synced devices.');
+    }
     if (!window.confirm(lines.join('\n'))) return;
 
     // 3. Keep a copy of what is here now. If that is impossible, say so and ask again.
@@ -640,6 +648,7 @@ export default function App() {
               onExportCSV={downloadCSV}
               onAbout={() => setAboutOpen(true)}
               onBackground={() => setBackgroundOpen(true)}
+              onSync={() => setSyncOpen(true)}
               canExport={habits.length > 0}
             />
           </div>
@@ -1033,6 +1042,8 @@ export default function App() {
           onClose={() => setBackgroundOpen(false)}
         />
       )}
+
+      {syncP.item && <SyncModal key={`sync${syncP.id}`} closing={syncP.closing} onClose={() => setSyncOpen(false)} />}
 
       {timerP.item && (
         <TimerModal

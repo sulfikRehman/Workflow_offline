@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Image as ImageIcon, Info, Menu, Save, Share2, Upload, X } from 'lucide-react';
+import { Cloud, Download, Image as ImageIcon, Info, Menu, Save, Share2, Upload, X } from 'lucide-react';
 import {
   LEVELS,
   getHapticLevel,
@@ -12,6 +12,7 @@ import type { HapticLevel } from '@/lib/haptics';
 import { THEME_PREFS, getThemePref, setThemePref } from '@/lib/theme';
 import type { ThemePref } from '@/lib/theme';
 import { backgroundSummary } from '@/lib/backgrounds';
+import { syncSummary } from '@/lib/cloudSync';
 import { usePresence } from './usePresence';
 import { useBackClose } from './useBackClose';
 
@@ -22,6 +23,7 @@ type Props = {
   onExportCSV: () => void;
   onAbout: () => void;
   onBackground: () => void;
+  onSync: () => void;
   /** CSV export needs at least one habit. */
   canExport: boolean;
 };
@@ -44,6 +46,7 @@ export default function MoreMenu({
   onExportCSV,
   onAbout,
   onBackground,
+  onSync,
   canExport,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -154,6 +157,14 @@ export default function MoreMenu({
               <span className="block text-[0.6875rem] text-neutral-500">
                 Download your history as a spreadsheet
               </span>
+            </span>
+          </button>
+
+          <button onClick={() => run(onSync)} className={itemCls}>
+            <Cloud className="h-4 w-4 shrink-0 text-neutral-400" />
+            <span>
+              Cloud sync
+              <span className="block text-[0.6875rem] text-neutral-500">{syncSummary()}</span>
             </span>
           </button>
 
